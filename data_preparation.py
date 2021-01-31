@@ -23,10 +23,10 @@ with open('./data/info/folders.json') as f:
 with open('./data/info/sensors.json') as f:
     sensors = json.load(f)
 save_path = './data/segmented data'
-# white_noises = ['W-1', 'W-2', 'W-5', 'W-7',
-#                 'W-9', 'W-11', 'W-13',
-#                 'W-15', 'W-21', 'W-23']
-white_noises = ['W-1']
+white_noises = ['W-1', 'W-2', 'W-5', 'W-7',
+                'W-9', 'W-11', 'W-13',
+                'W-15', 'W-21', 'W-23']
+# white_noises = ['W-1']
 levels = ['L1', 'L2']
 regions = ['Wall', 'Floor']
 
@@ -48,8 +48,15 @@ def seg_signal(args):
                     format(args.dim_input, white_noise), index=None)
 
 
-def denoise():
-    pass
+def denoise(args):
+    for white_noise in white_noises:
+        signal = dp.Denoise(save_path, white_noise, args.dim_input)
+        data = signal()
+        print('Signal denoise for {} completed.'.format(white_noise))
+        if not os.path.exists('./data/denoised data/{}'.format(args.dim_input)):
+            os.mkdir('./data/denoised data/{}'.format(args.dim_input))
+        data.to_csv('./data/denoised data/{}/{}_denoised.csv'.
+                    format(args.dim_input, white_noise), index=None)
 
 
 def fft(args):
@@ -68,4 +75,5 @@ if __name__ == '__main__':
     parser.add_argument('--dim_input', default=400, type=int)
     args = parser.parse_args()
     # seg_signal(args)
-    fft(args)
+    denoise(args)
+    # fft(args)

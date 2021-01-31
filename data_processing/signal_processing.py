@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 from scipy.fftpack import fft
 import json
+import matlab
+import matlab.engine
 
 
 class Segmentation:
@@ -66,7 +68,34 @@ class Segmentation:
 
 
 class Denoise:
-    pass
+    
+    def __init__(self, base_path, white_noise, dim_input):
+        self.white_noise = white_noise
+        self.data = pd.read_csv('{}/{}/{}_segmented.csv'.format(base_path,
+                                                                dim_input,
+                                                                white_noise),
+                                )
+
+    def __call__(self, *args, **kwargs):
+        data = self.wavelet_denoise()
+        return data
+
+    @staticmethod
+    def convert(x):
+        c = []
+        for i in range(x.size[1]):
+            c.append(x._data[i * x.size[0]: i * x.size[0] + x.size[0]][0])
+        return c
+
+    def wavelet_denoise(self):
+        data = pd.DataFrame()
+        for idx, header in enumerate(self.data.columns):
+            noisy_signal = matlab.double(list(self.data[header]))
+            engine = matlab.engine.start_matlab()
+            denoised_signal = engine.denoise(noisy_signal)
+            denoised_signal = self.convert(denoised_signal)
+            data.insert(idx, header, denoised_signal)
+        return data
 
 
 class FFT:

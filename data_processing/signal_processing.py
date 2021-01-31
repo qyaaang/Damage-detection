@@ -89,9 +89,9 @@ class Denoise:
 
     def wavelet_denoise(self):
         data = pd.DataFrame()
+        engine = matlab.engine.start_matlab()
         for idx, header in enumerate(self.data.columns):
             noisy_signal = matlab.double(list(self.data[header]))
-            engine = matlab.engine.start_matlab()
             denoised_signal = engine.denoise(noisy_signal)
             denoised_signal = self.convert(denoised_signal)
             data.insert(idx, header, denoised_signal)

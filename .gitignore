@@ -1,3 +1,4 @@
 /data/segmented data/*
+/data/denoised data/*
 /data/FFT/*
 *.csv

@@ -23,6 +23,7 @@ with open('./data/info/folders.json') as f:
 with open('./data/info/sensors.json') as f:
     sensors = json.load(f)
 save_path = './data/segmented data'
+denoise_path = './data/denoised data'
 white_noises = ['W-1', 'W-2', 'W-5', 'W-7',
                 'W-9', 'W-11', 'W-13',
                 'W-15', 'W-21', 'W-23']
@@ -61,7 +62,7 @@ def denoise(args):
 
 def fft(args):
     for white_noise in white_noises:
-        signal = dp.FFT(save_path, white_noise, args.dim_input)
+        signal = dp.FFT(denoise_path, white_noise, args.dim_input)
         data = signal()
         print('Signal FFT for {} completed.'.format(white_noise))
         if not os.path.exists('./data/FFT/{}'.format(args.dim_input)):
@@ -75,5 +76,5 @@ if __name__ == '__main__':
     parser.add_argument('--dim_input', default=400, type=int)
     args = parser.parse_args()
     # seg_signal(args)
-    denoise(args)
-    # fft(args)
+    # denoise(args)
+    fft(args)

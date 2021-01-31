@@ -15,8 +15,11 @@ import numpy as np
 import pandas as pd
 from scipy.fftpack import fft
 import json
-import matlab
-import matlab.engine
+import sys
+
+if sys.platform == 'win32':
+    import matlab
+    import matlab.engine
 
 
 class Segmentation:
@@ -102,9 +105,9 @@ class FFT:
 
     def __init__(self, base_path, white_noise, dim_input):
         self.white_noise = white_noise
-        self.data = pd.read_csv('{}/{}/{}_segmented.csv'.format(base_path,
-                                                                dim_input,
-                                                                white_noise),
+        self.data = pd.read_csv('{}/{}/{}_denoised.csv'.format(base_path,
+                                                               dim_input,
+                                                               white_noise),
                                 )
 
     def __call__(self, *args, **kwargs):

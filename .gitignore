@@ -1,3 +1,4 @@
 *.csv
 *.npy
 array.ipynb
+!/data/info/*.npy

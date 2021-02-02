@@ -15,10 +15,14 @@ import pandas as pd
 import json
 import os
 import argparse
+import sys
 import data_processing as dp
 
-data_path = '/Users/qunyang/Dropbox (Uni of Auckland)/Concrete-shared/' \
-            'Qun/ILEE project/Processed data/V2.0'
+if sys.platform == 'darwin':
+    data_path = '/Users/qunyang/Dropbox (Uni of Auckland)/Concrete-shared/' \
+                'Qun/ILEE project/Processed data/V2.0'
+else:
+    data_path = r'H:\EngFiles\ILEE project\Data\Processed data\V2.0'
 with open('./data/info/folders.json') as f:
     folders = json.load(f)
 info_path = './data/info'

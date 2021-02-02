@@ -11,52 +11,25 @@
 """
 
 
-import json
+import numpy as np
 
-sensors = {'L1': {'Wall': ['A-L1-Wall-A2-NS',
-                           'A-L1-Wall-A2-EW',
-                           'A-L1-Wall-A2-V',
-                           'A-L1-Wall-B1-NS',
-                           'A-L1-Wall-B1-EW',
-                           'A-L1-Wall-B1-V'
-                           ],
-                  'Floor': ['A-L1-Floor-A1-NS',
-                            'A-L1-Floor-A1-EW',
-                            'A-L1-Floor-A1-V',
-                            'A-L1-Floor-A2-NS',
-                            'A-L1-Floor-A2-EW',
-                            'A-L1-Floor-A2-V',
-                            'A-L1-Floor-B1-NS',
-                            'A-L1-Floor-B1-EW',
-                            'A-L1-Floor-B1-V',
-                            'A-L1-Floor-B2-NS',
-                            'A-L1-Floor-B2-EW',
-                            'A-L1-Floor-B2-V'
-                            ]
-                  },
-           'L2': {'Wall': ['A-L2-Wall-A2-NS',
-                           'A-L2-Wall-A2-EW',
-                           'A-L2-Wall-A2-V',
-                           'A-L2-Wall-B1-NS',
-                           'A-L2-Wall-B1-EW',
-                           'A-L2-Wall-B1-V'
-                           ],
-                  'Floor': ['A-L2-Floor-A1-NS',
-                            'A-L2-Floor-A1-EW',
-                            'A-L2-Floor-A1-V',
-                            'A-L2-Floor-A2-NS',
-                            'A-L2-Floor-A2-EW',
-                            'A-L2-Floor-A2-V',
-                            'A-L2-Floor-B1-NS',
-                            'A-L2-Floor-B1-EW',
-                            'A-L2-Floor-B1-V',
-                            'A-L2-Floor-B2-NS',
-                            'A-L2-Floor-B2-EW',
-                            'A-L2-Floor-B2-V'
-                            ]
-                  }
-           }
-
-sensors = json.dumps(sensors, indent=2)
-with open('./sensors.json', 'w') as f:
-    f.write(sensors)
+levels = ['L1', 'L2']
+components = {'Wall': ['A2', 'B1'],
+              'Floor': ['A1', 'A2', 'B1', 'B2']
+              }
+dirs = ['NS', 'EW', 'V']
+spots = []
+sensors = []
+for level in levels:
+    for component in components.keys():
+        locations = components[component]
+        for location in locations:
+            spot = '{}-{}-{}'.format(level, component, location)
+            spots.append(spot)
+            for d in dirs:
+                sensor_name = 'A-{}-{}-{}-{}'.format(level, component, location, d)
+                sensors.append(sensor_name)
+spots = np.array(spots)
+sensors = np.array(sensors)
+np.save('./sensors.npy', sensors)
+np.save('./spots.npy', spots)

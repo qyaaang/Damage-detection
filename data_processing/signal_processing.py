@@ -33,8 +33,8 @@ class Segmentation:
         self.dim_input = dim_input
 
     def __call__(self, *args, **kwargs):
-        data = self.write_signal(args[0])
-        return data
+        data, num = self.write_signal(args[0])
+        return data, num
 
     def seg_signal(self, sensor_name):
         """
@@ -55,7 +55,7 @@ class Segmentation:
                              (0, self.dim_input - (len(data) % self.dim_input)),
                              'constant', constant_values=0)
             data_split.append(tmp)
-        return data_split
+        return data_split, num_seg
 
     def write_signal(self, sensor_name):
         """
@@ -64,10 +64,10 @@ class Segmentation:
         :return:
         """
         data = pd.DataFrame()
-        signals = self.seg_signal(sensor_name)
+        signals, num_seg = self.seg_signal(sensor_name)
         for idx, signal in enumerate(signals):
             data.insert(idx, '{}_{}'.format(sensor_name, idx + 1), signal)
-        return data
+        return data, num_seg
 
 
 class Denoise:

@@ -2,3 +2,4 @@
 *.npy
 array.ipynb
 !/data/info/*.npy
+/results/*

@@ -24,13 +24,13 @@ if sys.platform == 'win32':
 
 class Segmentation:
 
-    def __init__(self, base_path, folders, white_noise, dim_input):
+    def __init__(self, base_path, folders, white_noise, len_seg):
         self.white_noise = white_noise
         self.data = pd.read_csv('{}/{}/{}-processed.csv'.format(base_path,
                                                                 folders[white_noise],
                                                                 white_noise),
                                 skiprows=[0, 1, 2, 4])
-        self.dim_input = dim_input
+        self.len_seg = len_seg  # Length of segmentation
 
     def __call__(self, *args, **kwargs):
         data, num = self.write_signal(args[0])
@@ -43,16 +43,16 @@ class Segmentation:
         :return: Segmented signal
         """
         data = np.array(self.data[sensor_name])
-        num_seg = len(data) // self.dim_input + 1
+        num_seg = len(data) // self.len_seg + 1
         data_split = []
         idx = 0
         for i in range(num_seg):
             if i < num_seg - 1:
-                tmp = data[idx: idx + self.dim_input]
-                idx += self.dim_input
+                tmp = data[idx: idx + self.len_seg]
+                idx += self.len_seg
             else:
                 tmp = np.pad(data[idx:],
-                             (0, self.dim_input - (len(data) % self.dim_input)),
+                             (0, self.len_seg - (len(data) % self.len_seg)),
                              'constant', constant_values=0)
             data_split.append(tmp)
         return data_split, num_seg
@@ -72,10 +72,10 @@ class Segmentation:
 
 class Denoise:
     
-    def __init__(self, base_path, white_noise, dim_input):
+    def __init__(self, base_path, white_noise, len_seg):
         self.white_noise = white_noise
         self.data = pd.read_csv('{}/{}/{}_segmented.csv'.format(base_path,
-                                                                dim_input,
+                                                                len_seg,
                                                                 white_noise),
                                 )
 
@@ -103,10 +103,10 @@ class Denoise:
 
 class FFT:
 
-    def __init__(self, base_path, white_noise, dim_input):
+    def __init__(self, base_path, white_noise, len_seg):
         self.white_noise = white_noise
         self.data = pd.read_csv('{}/{}/{}_denoised.csv'.format(base_path,
-                                                               dim_input,
+                                                               len_seg,
                                                                white_noise),
                                 )
 
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                 'Qun/ILEE project/Processed data/V2.0'
     with open('../data/info/folders.json') as f:
         folders = json.load(f)
-    seg = Segmentation(data_path, folders, 'W-1')
+    seg = Segmentation(data_path, folders, 'W-1', 400)
     a = seg.write_signal('A-L2-Floor-B2-EW')
     path = '../data/segmented data'
     f = FFT(path, 'W-1', 400)

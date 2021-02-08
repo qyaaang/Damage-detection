@@ -13,7 +13,7 @@
 
 import torch
 from torch.utils.data import DataLoader
-from torch import nn, optim
+from torch import nn, optim, autograd
 import numpy as np
 import data_processing as dp
 import time
@@ -92,8 +92,19 @@ class BaseExperiment:
                                           self.args.num_epoch
                                           )
 
-    def gradient_penalty(self):
-        pass
+    def gradient_penalty(self, x_real, x_fake, batch_size, beta=0.3):
+        x_real = x_real.detach()
+        x_fake = x_fake.detach()
+        alpha = torch.rand(batch_size, 1)
+        alpha = alpha.expand_as(x_real)
+        interpolates = alpha * x_real + ((1 - alpha) * x_fake)
+        interpolates.requires_grad_()
+        dis_interpolates = self.Discriminator(interpolates)
+        gradients = autograd.grad(outputs=dis_interpolates, inputs=interpolates,
+                                  grad_outputs=torch.ones_like(dis_interpolates),
+                                  create_graph=True, retain_graph=True, only_inputs=True)[0]
+        grad_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * beta
+        return grad_penalty
 
     def train(self):
         self.Generator.apply(self.weights_init)
@@ -101,40 +112,51 @@ class BaseExperiment:
         gen_optimizer = self.select_optimizer(self.Generator)
         dis_optimizer = self.select_optimizer(self.Generator)
         losses = {}
+        criterion = nn.MSELoss()
         dis_losses, gen_losses = [0], [0]
         for epoch in range(self.args.num_epoch):
             t0 = time.time()
-            # Train Discriminator for k steps
-            for _ in range(5):
-                for _, sample_batched in enumerate(self.data_loader):
-                    pred_real = self.Discriminator(torch.tensor(sample_batched, dtype=torch.float32))
+            for _, sample_batched in enumerate(self.data_loader):
+                data_real = torch.tensor(sample_batched, dtype=torch.float32)
+                batch_size = sample_batched.size(0)
+                # 1. Train Discriminator: maximize log(D(x)) + log(1 - D(G(z)))
+                for _ in range(5):
+                    pred_real = self.Discriminator(data_real)
                     loss_real = - pred_real.mean()
                     # Generate data
-                    z = torch.rand(self.args.batch_size, self.args.dim_noise)
-                    x_fake = self.Generator(z).detach()
-                    pred_fake = self.Discriminator(x_fake)
+                    z = torch.rand(batch_size, self.args.dim_noise)
+                    data_fake = self.Generator(z).detach()
+                    pred_fake = self.Discriminator(data_fake)
                     loss_fake = pred_fake.mean()
                     # Discriminator loss
-                    dis_loss = loss_real + loss_fake
+                    if self.args.model_name == 'WGAN':
+                        grad_penalty = self.gradient_penalty(data_real, data_fake, batch_size)
+                    else:
+                        grad_penalty = 0
+                    dis_loss = loss_real + loss_fake + grad_penalty
                     dis_optimizer.zero_grad()
                     dis_loss.backward()
                     dis_optimizer.step()
-            # Train Generator
-            z = torch.rand(self.args.batch_size, self.args.dim_noise)
-            x_fake = self.Generator(z)
-            pred_fake = self.Discriminator(x_fake)
-            gen_loss = - pred_fake.mean()
-            gen_optimizer.zero_grad()
-            gen_loss.backward()
-            gen_optimizer.step()
+                # Train Generator: maximize log(D(G(z)))
+                z = torch.rand(batch_size, self.args.dim_noise)
+                data_fake = self.Generator(z)
+                mse = criterion(data_fake, data_real)
+                pred_fake = self.Discriminator(data_fake)
+                gen_loss = - pred_fake.mean()
+                gen_optimizer.zero_grad()
+                gen_loss.backward()
+                gen_optimizer.step()
             t1 = time.time()
             print('\033[1;31m[Epoch {:>4}]\033[0m  '
-                  '\033[1;31mDiscriminator loss = {:.5f}\033[0m  '
-                  '\033[1;32mGenerator loss = {:.5f}\033[0m  '
+                  '\033[1;31mD(x) = {:.5f}\033[0m  '
+                  '\033[1;32mD(G(z)) = {:.5f}\033[0m  '
+                  '\033[1;32mRes = {:.5f}\033[0m  '
                   'Time cost={:.2f}s'.format(epoch + 1,
-                                             dis_loss.item(),
-                                             - gen_loss.item(),
-                                             t1 - t0)
+                                             -loss_real,
+                                             - gen_loss,
+                                             mse.item(),
+                                             t1 - t0
+                                             )
                   )
             dis_losses.append(dis_loss.item())
             gen_losses.append(- gen_loss.item())

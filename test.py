@@ -69,17 +69,19 @@ class DamageDetection:
                 data_gen = self.Generator(z)
                 data_real = self.testset[i]
                 res = ((data_gen - data_real) ** 2).mean()
-                dis = self.Discriminator(data_real).mean() - 0.5
+                dis = self.Discriminator(data_gen).mean() - 1
                 loss = beta * res.item() + (1 - beta) * np.abs(dis.item())
                 damage_indices[spot]['Generate residual'] = res.item()
                 damage_indices[spot]['Discriminate loss'] = np.abs(dis.item())
                 damage_indices[spot]['Loss'] = loss
-                print('[{}]\tLoss: {:5f}'.format(spot, loss))
+                print('[{}]\tGenerate residual: {:5f}\tDiscriminate loss: {:5f}\tLoss: {:5f}'.
+                      format(spot, res.item(), np.abs(dis.item()), loss)
+                      )
         damage_indices = json.dumps(damage_indices, indent=2)
         with open('{}/damage index/{}_{}.json'.format(save_path,
                                                       self.args.dataset,
                                                       self.file_name()
-                                                      ), 'w') as f:
+                                         ), 'w') as f:
             f.write(damage_indices)
 
 

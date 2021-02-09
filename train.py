@@ -15,6 +15,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch import nn, optim, autograd
 import numpy as np
+import matplotlib.pyplot as plt
 import data_processing as dp
 import time
 import json
@@ -38,9 +39,11 @@ class BaseExperiment:
             print('>>> {}: {}'.format(arg, getattr(args, arg)))
         white_noise = dp.DatasetReader(white_noise=self.args.dataset,
                                        data_path=data_path,
+                                       data_source=args.data,
                                        len_seg=self.args.len_seg
                                        )
-        self.data_loader = DataLoader(dataset=white_noise.dataset,
+        dataset, _ = white_noise(args.net_name)
+        self.data_loader = DataLoader(dataset=dataset,
                                       batch_size=args.batch_size,
                                       shuffle=True
                                       )
@@ -124,7 +127,7 @@ class BaseExperiment:
                     pred_real = self.Discriminator(data_real)
                     loss_real = - pred_real.mean()
                     # Generate data
-                    z = torch.rand(batch_size, self.args.dim_noise)
+                    z = torch.randn(batch_size, self.args.dim_noise)
                     data_fake = self.Generator(z).detach()
                     pred_fake = self.Discriminator(data_fake)
                     loss_fake = pred_fake.mean()
@@ -138,55 +141,59 @@ class BaseExperiment:
                     dis_loss.backward()
                     dis_optimizer.step()
                 # Train Generator: maximize log(D(G(z)))
-                z = torch.rand(batch_size, self.args.dim_noise)
-                data_fake = self.Generator(z)
-                mse = criterion(data_fake, data_real)
                 pred_fake = self.Discriminator(data_fake)
                 gen_loss = - pred_fake.mean()
                 gen_optimizer.zero_grad()
                 gen_loss.backward()
                 gen_optimizer.step()
+                mse = criterion(data_fake, data_real)
             t1 = time.time()
             print('\033[1;31m[Epoch {:>4}]\033[0m  '
                   '\033[1;31mD(x) = {:.5f}\033[0m  '
                   '\033[1;32mD(G(z)) = {:.5f}\033[0m  '
-                  '\033[1;32mRes = {:.5f}\033[0m  '
+                  '\033[1;32mMSE = {:.5f}\033[0m  '
                   'Time cost={:.2f}s'.format(epoch + 1,
                                              -loss_real,
                                              - gen_loss,
-                                             mse.item(),
+                                             mse,
                                              t1 - t0
                                              )
                   )
             dis_losses.append(dis_loss.item())
             gen_losses.append(- gen_loss.item())
-        # Save models
-        path_gen = '{}/models/{}_Gen.model'.format(save_path, self.file_name())
-        path_dis = '{}/models/{}_Dis.model'.format(save_path, self.file_name())
-        torch.save(self.Generator.state_dict(), path_gen)
-        torch.save(self.Discriminator.state_dict(), path_dis)
-        # Write learning history
-        losses['Discriminator'] = dis_losses
-        losses['Generator'] = gen_losses
-        losses = json.dumps(losses, indent=2)
-        with open('{}/learning history/{}.json'.format(save_path, self.file_name()), 'w') as f:
-            f.write(losses)
+            fig, ax = plt.subplots()
+            ax.plot(data_real[0], label='real')
+            ax.plot(data_fake[0], ls='--', lw=0.5, label='fake')
+            ax.legend()
+        plt.show()
+        # # Save models
+        # path_gen = '{}/models/{}_Gen.model'.format(save_path, self.file_name())
+        # path_dis = '{}/models/{}_Dis.model'.format(save_path, self.file_name())
+        # torch.save(self.Generator.state_dict(), path_gen)
+        # torch.save(self.Discriminator.state_dict(), path_dis)
+        # # Write learning history
+        # losses['Discriminator'] = dis_losses
+        # losses['Generator'] = gen_losses
+        # losses = json.dumps(losses, indent=2)
+        # with open('{}/learning history/{}.json'.format(save_path, self.file_name()), 'w') as f:
+        #     f.write(losses)
 
 
 def main():
     # Hyper-parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='W-1', type=str)
-    parser.add_argument('--model_name', default='GAN', type=str)
+    parser.add_argument('--data', default='denoised', type=str)
+    parser.add_argument('--model_name', default='WGAN', type=str)
     parser.add_argument('--net_name', default='MLP', type=str)
     parser.add_argument('--len_seg', default=400, type=int)
     parser.add_argument('--optimizer', default='SGD', type=str)
     parser.add_argument('--initializer', default='xavier_uniform_', type=str)
-    parser.add_argument('--dim_noise', default=50, type=int)
-    parser.add_argument('--dim_input', default=384, type=int)
+    parser.add_argument('--dim_noise', default=100, type=int)
+    parser.add_argument('--dim_input', default=1200, type=int)
     parser.add_argument('--dim_hidden', default=1000, type=int)
-    parser.add_argument('--dim_output', default=384, type=int)
-    parser.add_argument('--seed', default=1993, type=int)
+    parser.add_argument('--dim_output', default=1200, type=int)
+    parser.add_argument('--seed', default=23, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)
     parser.add_argument('--learning_rate', default=1e-2, type=float)

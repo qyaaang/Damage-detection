@@ -14,10 +14,10 @@
 from torch import nn
 
 
-class Gen_MLP(nn.Module):
+class MLP_G(nn.Module):
 
     def __init__(self, dim_noise, dim_hidden, dim_output):
-        super(Gen_MLP, self).__init__()
+        super(MLP_G, self).__init__()
         self.net = nn.Sequential(nn.Linear(dim_noise, dim_hidden),
                                  nn.ReLU(True),
                                  nn.Linear(dim_hidden, dim_hidden),
@@ -32,16 +32,16 @@ class Gen_MLP(nn.Module):
         return output
 
 
-class Dis_MLP(nn.Module):
+class MLP_D(nn.Module):
 
     def __init__(self, dim_input, dim_hidden):
-        super(Dis_MLP, self).__init__()
+        super(MLP_D, self).__init__()
         self.net = nn.Sequential(nn.Linear(dim_input, dim_hidden),
-                                 nn.ReLU(True),
+                                 nn.LeakyReLU(0.2, True),
                                  nn.Linear(dim_hidden, dim_hidden),
-                                 nn.ReLU(True),
+                                 nn.LeakyReLU(0.2, True),
                                  nn.Linear(dim_hidden, dim_hidden),
-                                 nn.ReLU(True),
+                                 nn.LeakyReLU(0.2, True),
                                  nn.Linear(dim_hidden, 1),
                                  nn.Sigmoid()
                                  )

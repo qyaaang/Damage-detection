@@ -12,10 +12,13 @@
 
 
 from torch import nn
-from layers.MLP import Gen_MLP
+from layers.MLP import MLP_G
+from layers.Conv2D import Conv2D_G
 
 
-net_classes = {'MLP': Gen_MLP}
+net_classes = {'MLP': MLP_G,
+               'Conv2D': Conv2D_G
+               }
 
 
 class Generator(nn.Module):
@@ -23,10 +26,13 @@ class Generator(nn.Module):
     def __init__(self, args):
         super(Generator, self).__init__()
         net = net_classes[args.net_name]
-        self.net = net(dim_noise=args.dim_noise,
-                       dim_hidden=args.dim_hidden,
-                       dim_output=args.dim_output
-                       )
+        if args.net_name == 'MLP':
+            self.net = net(dim_noise=args.dim_noise,
+                           dim_hidden=args.dim_hidden,
+                           dim_output=args.dim_output
+                           )
+        else:
+            self.net = net()
 
     def forward(self, z):
         output = self.net(z)

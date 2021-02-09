@@ -16,39 +16,60 @@ import numpy as np
 
 class DatasetReader:
 
-    def __init__(self, white_noise, data_path, len_seg):
+    def __init__(self, white_noise, data_path, data_source, len_seg):
         self.white_noise = white_noise
-        self.data = np.load('{}/FFT/{}/{}_FFT.npy'.format(data_path, len_seg, white_noise))
-        self.dataset, self.dataset_ = self.generate_dataset()
+        self.data = np.load('{0}/{1}/{2}/{3}_{1}.npy'.format(data_path, data_source, len_seg, white_noise))
+        self.num_sensor = self.data.shape[0]
+        self.num_channel = self.data.shape[1]
+        self.num_seg = self.data.shape[2]
+        self.num_feature = self.data.shape[3]
 
     def __call__(self, *args, **kwargs):
         print('Preparing {} dataset...'.format(self.white_noise))
-        dataset = self.generate_dataset()
-        return dataset
+        if args[0] == 'MLP':
+            trainset, testset = self.gen_trainset_mlp(), self.gen_testset_mlp()
+        else:
+            trainset, testset = self.gen_trainset_conv2d(), self.gen_testset_conv2d()
+        return trainset, testset
 
-    def generate_dataset(self):
+    def gen_trainset_mlp(self):
         """
         [12, 3, num_seg, num_feature] => [12 * num_seg, num_feature * 3]
         num_feature = 128
         :return:
         """
-        num_sensor = self.data.shape[0]
-        num_channel = self.data.shape[1]
-        num_seg = self.data.shape[2]
-        num_feature = self.data.shape[3]
-        # [12, 3, num_seg, num_feature] => [12, num_seg, num_feature * 3]
-        dataset_ = np.zeros((num_sensor, num_seg, num_feature * num_channel))
-        for i in range(num_sensor):
-            tmp = self.data[i][0]
-            for j in range(1, num_channel):
-                tmp = np.hstack((tmp, self.data[0][j]))
-            dataset_[i] = tmp
+        trainset = self.gen_testset_mlp()
         # [12, num_seg, num_feature * 3] => [12 * num_seg, num_feature * 3]
-        dataset = dataset_.reshape((num_sensor * num_seg, -1))
-        return dataset, dataset_
+        trainset = trainset.reshape((self.num_sensor * self.num_seg, -1))
+        return trainset
+
+    def gen_testset_mlp(self):
+        # [12, 3, num_seg, num_feature] => [12, num_seg, num_feature * 3]
+        testset = np.zeros((self.num_sensor, self.num_seg, self.num_feature * self.num_channel))
+        for i in range(self.num_sensor):
+            tmp = self.data[i][0]
+            for j in range(1, self.num_channel):
+                tmp = np.hstack((tmp, self.data[0][j]))
+            testset[i] = tmp
+        return testset
+
+    def gen_trainset_conv2d(self):
+        # [12, 3, num_seg, num_feature] => [12 * num_seg, 3, num_feature]
+        trainset = np.zeros((self.num_sensor * self.num_seg, self.num_channel, self.num_feature))
+        m = 0
+        for i in range(self.num_sensor):
+            for j in range(self.num_seg):
+                for k in range(self.num_channel):
+                    trainset[m][k][:] = self.data[i][k][j][:]
+                m += 1
+        return trainset
+
+    def gen_testset_conv2d(self):
+        # [12, 3, num_seg, num_feature] => [12, num_seg, 3, num_feature]
+        return self.data.transpose((0, 2, 1, 3))
 
 
 if __name__ == '__main__':
     data_path = '../data/data_processed'
     reader = DatasetReader('W-1', data_path, 400)
-    dataset = reader()
+    trainset, testset = reader('MLP')

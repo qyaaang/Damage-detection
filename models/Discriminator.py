@@ -12,10 +12,13 @@
 
 
 from torch import nn
-from layers.MLP import Dis_MLP
+from layers.MLP import MLP_D
+from layers.Conv2D import Conv2D_D
 
 
-net_classes = {'MLP': Dis_MLP}
+net_classes = {'MLP': MLP_D,
+               'Conv2D': Conv2D_D
+               }
 
 
 class Discriminator(nn.Module):
@@ -23,9 +26,12 @@ class Discriminator(nn.Module):
     def __init__(self, args):
         super(Discriminator, self).__init__()
         net = net_classes[args.net_name]
-        self.net = net(dim_input=args.dim_input,
-                       dim_hidden=args.dim_hidden,
-                       )
+        if args.net_name == 'MLP':
+            self.net = net(dim_input=args.dim_input,
+                           dim_hidden=args.dim_hidden,
+                           )
+        else:
+            self.net = net()
 
     def forward(self, x):
         output = self.net(x)

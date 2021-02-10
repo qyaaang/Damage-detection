@@ -10,15 +10,12 @@
 @version: 1.0
 """
 
-
 import torch
 import numpy as np
 import data_processing as dp
 import argparse
 import json
-from models.Generator import Generator
-from models.Discriminator import Discriminator
-
+from models.AutoEncoder import AutoEncoder
 
 data_path = './data/data_processed'
 info_path = './data/info'
@@ -34,12 +31,13 @@ class DamageDetection:
         print('{} detection...'.format(args.dataset))
         white_noise = dp.DatasetReader(white_noise=self.args.dataset,
                                        data_path=data_path,
+                                       data_source=args.data,
                                        len_seg=self.args.len_seg
                                        )
-        self.testset = torch.tensor(torch.from_numpy(white_noise.dataset_), dtype=torch.float32)
+        _, self.testset = white_noise(args.net_name)
         self.spots = np.load('{}/spots.npy'.format(info_path))
-        self.Generator = Generator(args)  # Generator
-        self.Discriminator = Discriminator(args)  # Discriminator
+        self.AE = AutoEncoder(args)
+        self.feat = np.load('{}/features/{}.npy'.format(save_path, self.file_name()))
 
     def __call__(self, *args, **kwargs):
         self.test()
@@ -54,52 +52,51 @@ class DamageDetection:
                                           )
 
     def test(self):
-        path_gen = '{}/models/{}_Gen.model'.format(save_path, self.file_name())
-        path_dis = '{}/models/{}_Dis.model'.format(save_path, self.file_name())
-        self.Generator.load_state_dict(torch.load(path_gen))  # Load Generator
-        self.Discriminator.load_state_dict(torch.load(path_dis))  # Load Discriminator
-        self.Generator.eval()
-        self.Discriminator.eval()
+        path = '{}/models/{}.model'.format(save_path, self.file_name())
+        self.AE.load_state_dict(torch.load(path))  # Load AutoEncoder
+        self.AE.eval()
         damage_indices = {}
-        beta = 0.5
         with torch.no_grad():
             for i, spot in enumerate(self.spots):
                 damage_indices[spot] = {}
-                z = torch.randn(self.testset.shape[1], 50)
-                data_gen = self.Generator(z)
-                data_real = self.testset[i]
-                res = ((data_gen - data_real) ** 2).mean()
-                dis = self.Discriminator(data_gen).mean() - 1
-                loss = beta * res.item() + (1 - beta) * np.abs(dis.item())
-                damage_indices[spot]['Generate residual'] = res.item()
-                damage_indices[spot]['Discriminate loss'] = np.abs(dis.item())
-                damage_indices[spot]['Loss'] = loss
-                print('[{}]\tGenerate residual: {:5f}\tDiscriminate loss: {:5f}\tLoss: {:5f}'.
-                      format(spot, res.item(), np.abs(dis.item()), loss)
+                data_origin = torch.from_numpy(self.testset[i])
+                data_origin = torch.tensor(data_origin, dtype=torch.float32)
+                feature_origin = self.feat[i: i + 71]
+                if self.args.net_name == 'Conv2D': data_origin = data_origin.unsqueeze(2)
+                data_reconstruct, feature_reconstruct = self.AE(data_origin)
+                c_res = ((data_reconstruct - data_origin) ** 2).mean()
+                f_res = ((feature_reconstruct - feature_origin) ** 2).mean()
+                damage_index = 0
+                # damage_indices[spot]['Generate residual'] = res.item()
+                # damage_indices[spot]['Discriminate loss'] = np.abs(dis.item())
+                print('[{}]\tLoss: {:5f}\tLoss: {:5f}'.
+                      format(spot, c_res.item(), f_res.item())
                       )
-        damage_indices = json.dumps(damage_indices, indent=2)
-        with open('{}/damage index/{}_{}.json'.format(save_path,
-                                                      self.args.dataset,
-                                                      self.file_name()
-                                         ), 'w') as f:
-            f.write(damage_indices)
+                i += 71
+        # damage_indices = json.dumps(damage_indices, indent=2)
+        # with open('{}/damage index/{}_{}.json'.format(save_path,
+        #                                               self.args.dataset,
+        #                                               self.file_name()
+        #                                  ), 'w') as f:
+        #     f.write(damage_indices)
 
 
 def main():
     # Hyper-parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='W-2', type=str)
-    parser.add_argument('--model_name', default='GAN', type=str)
+    parser.add_argument('--data', default='FFT', type=str)
+    parser.add_argument('--model_name', default='AE', type=str)
     parser.add_argument('--net_name', default='MLP', type=str)
     parser.add_argument('--len_seg', default=400, type=int)
-    parser.add_argument('--optimizer', default='SGD', type=str)
-    parser.add_argument('--dim_noise', default=50, type=int)
+    parser.add_argument('--optimizer', default='Adam', type=str)
+    parser.add_argument('--initializer', default='xavier_normal_', type=str)
     parser.add_argument('--dim_input', default=384, type=int)
-    parser.add_argument('--dim_hidden', default=1000, type=int)
-    parser.add_argument('--dim_output', default=384, type=int)
-    parser.add_argument('--seed', default=1993, type=int)
+    parser.add_argument('--dim_feature', default=20, type=int)
+    parser.add_argument('--seed', default=23, type=int)
+    parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)
-    parser.add_argument('--learning_rate', default=1e-2, type=float)
+    parser.add_argument('--learning_rate', default=1e-4, type=float)
     args = parser.parse_args()
     detector = DamageDetection(args)
     detector()

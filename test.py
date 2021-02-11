@@ -31,7 +31,7 @@ class DamageDetection:
         print('{} detection...'.format(args.dataset))
         white_noise = dp.DatasetReader(white_noise=self.args.dataset,
                                        data_path=data_path,
-                                       data_source=args.data,
+                                       data_source=args.data_source,
                                        len_seg=self.args.len_seg
                                        )
         _, self.testset = white_noise(args.net_name)
@@ -61,7 +61,7 @@ class DamageDetection:
                 damage_indices[spot] = {}
                 data_origin = torch.from_numpy(self.testset[i])
                 data_origin = torch.tensor(data_origin, dtype=torch.float32)
-                feature_origin = self.feat[i: i + 71]
+                feature_origin = self.feat[i: i + data_origin.size(0)]
                 if self.args.net_name == 'Conv2D': data_origin = data_origin.unsqueeze(2)
                 data_reconstruct, feature_reconstruct = self.AE(data_origin)
                 c_res = ((data_reconstruct - data_origin) ** 2).mean()
@@ -72,7 +72,7 @@ class DamageDetection:
                 print('[{}]\tLoss: {:5f}\tLoss: {:5f}'.
                       format(spot, c_res.item(), f_res.item())
                       )
-                i += 71
+                i += data_origin.size(0)
         # damage_indices = json.dumps(damage_indices, indent=2)
         # with open('{}/damage index/{}_{}.json'.format(save_path,
         #                                               self.args.dataset,
@@ -85,14 +85,18 @@ def main():
     # Hyper-parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='W-2', type=str)
-    parser.add_argument('--data', default='FFT', type=str)
+    parser.add_argument('--data_source', default='FFT', type=str)
     parser.add_argument('--model_name', default='AE', type=str)
     parser.add_argument('--net_name', default='MLP', type=str)
     parser.add_argument('--len_seg', default=400, type=int)
     parser.add_argument('--optimizer', default='Adam', type=str)
     parser.add_argument('--initializer', default='xavier_normal_', type=str)
+    # MLP setting
     parser.add_argument('--dim_input', default=384, type=int)
     parser.add_argument('--dim_feature', default=20, type=int)
+    # Conv2D setting
+    parser.add_argument('--num_feature_map', default=128, type=int)
+    parser.add_argument('--num_hidden_map', default=256, type=int)
     parser.add_argument('--seed', default=23, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)

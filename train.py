@@ -39,7 +39,7 @@ class BaseExperiment:
             print('>>> {}: {}'.format(arg, getattr(args, arg)))
         white_noise = dp.DatasetReader(white_noise=self.args.dataset,
                                        data_path=data_path,
-                                       data_source=args.data,
+                                       data_source=args.data_source,
                                        len_seg=self.args.len_seg
                                        )
         dataset, _ = white_noise(args.net_name)
@@ -111,23 +111,41 @@ class BaseExperiment:
         losses = [0]
         for epoch in range(self.args.num_epoch):
             if self.args.net_name == 'MLP':
-                f = torch.zeros(852, self.args.dim_feature)
+                if self.args.model_name == 'VAE':
+                    f = torch.zeros(len(self.data_loader.dataset), int(self.args.dim_feature / 2))
+                else:
+                    f = torch.zeros(len(self.data_loader.dataset), int(self.args.dim_feature))
             else:
-                f = torch.zeros(852, 512, 1, 16)
+                f = torch.zeros(len(self.data_loader.dataset), self.args.num_hidden_map, 1, 8)
             idx = 0
             for _, sample_batched in enumerate(self.data_loader):
                 batch_size = sample_batched.size(0)
                 x = torch.tensor(sample_batched, dtype=torch.float32)
                 if self.args.net_name == 'Conv2D': x = x.unsqueeze(2)
-                x_hat, z = self.AE(x)
+                if self.args.model_name == 'VAE':
+                    x_hat, z, kld = self.AE(x)
+                    loss = self.criterion(x_hat, x)
+                    elbo = - loss - 1.0 * kld
+                    loss = - elbo
+                else:
+                    x_hat, z = self.AE(x)
+                    mse = self.criterion(x_hat, x)
+                    kld = torch.sum(x * torch.log(x + 1e-7 / x_hat)) / x.numel()
+                    loss = mse + 0.0 * kld
+                    loss = loss
                 f[idx: idx + batch_size] = z
-                loss = self.criterion(x_hat, x)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 idx += batch_size
-            print('\033[1;31mEpoch: {}\033[0m\t'
-                  '\033[1;32mReconstruction loss: {:5f}\033[0m'.format(epoch + 1, loss.item()))
+            if self.args.model_name == 'VAE':
+                print('\033[1;31mEpoch: {}\033[0m\t'
+                      '\033[1;32mReconstruction loss: {:5f}\033[0m\t'
+                      '\033[1;32mKL Divergency: {:5f}\033[0m'
+                      .format(epoch + 1, loss.item(), kld))
+            else:
+                print('\033[1;31mEpoch: {}\033[0m\t'
+                      '\033[1;32mReconstruction loss: {:5f}\033[0m'.format(epoch + 1, loss.item()))
             if loss.item() < best_loss:
                 best_loss = loss.item()
                 best_epoch = epoch + 1
@@ -153,14 +171,18 @@ def main():
     # Hyper-parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='W-1', type=str)
-    parser.add_argument('--data', default='FFT', type=str)
+    parser.add_argument('--data_source', default='FFT', type=str)
     parser.add_argument('--model_name', default='AE', type=str)
     parser.add_argument('--net_name', default='MLP', type=str)
     parser.add_argument('--len_seg', default=400, type=int)
     parser.add_argument('--optimizer', default='Adam', type=str)
     parser.add_argument('--initializer', default='xavier_normal_', type=str)
+    # MLP setting
     parser.add_argument('--dim_input', default=384, type=int)
     parser.add_argument('--dim_feature', default=20, type=int)
+    # Conv2D setting
+    parser.add_argument('--num_feature_map', default=128, type=int)
+    parser.add_argument('--num_hidden_map', default=256, type=int)
     parser.add_argument('--seed', default=23, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)

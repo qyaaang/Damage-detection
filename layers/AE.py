@@ -10,18 +10,17 @@
 @version: 1.0
 """
 
+
+import torch
 from torch import nn
-
-
-ngf = 128
-ndf = 128
-nc = 3
 
 
 class AutoEncoder(nn.Module):
 
     def __init__(self, args):
         super(AutoEncoder, self).__init__()
+        self.args = args
+        dim_feature = args.dim_feature / 2 if args.model_name == 'VAE' else args.dim_feature
         self.encoder = nn.Sequential(
             nn.Linear(args.dim_input, 256),
             nn.LeakyReLU(0.2, inplace=True),
@@ -33,7 +32,7 @@ class AutoEncoder(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
         )
         self.decoder = nn.Sequential(
-            nn.Linear(args.dim_feature, 64),
+            nn.Linear(int(dim_feature), 64),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(64, 128),
             nn.LeakyReLU(0.2, inplace=True),
@@ -44,42 +43,72 @@ class AutoEncoder(nn.Module):
         )
 
     def forward(self, x):
-        z = self.encoder(x)
-        output = self.decoder(z)
-        return output, z
+        batch_size = x.size(0)
+        if self.args.model_name == 'VAE':
+            z_ = self.encoder(x)
+            miu, sigma = z_.chunk(2, dim=1)
+            z = miu + sigma * torch.randn_like(sigma)
+            kld = 0.5 * torch.sum(
+                torch.pow(miu, 2) +
+                torch.pow(sigma, 2) -
+                torch.log(1e-8 + torch.pow(sigma, 2)) - 1
+            ) / (batch_size * x.size(1))
+            output = self.decoder(z)
+            return output, z, kld
+        else:
+            z = self.encoder(x)
+            output = self.decoder(z)
+            return output, z
 
 
 class AutoEncoderConv(nn.Module):
 
-    def __init__(self):
+    def __init__(self, args):
         super(AutoEncoderConv, self).__init__()
+        self.args = args
         self.encoder = nn.Sequential(
-            # input is (nc) x 1 x 128
-            nn.Conv2d(nc, ndf, kernel_size=(1, 4), stride=(1, 2), padding=(0, 1), bias=False),
+            # [b, 3, 1, 128]
+            nn.Conv2d(3, args.num_feature_map, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 1 x 64
-            nn.Conv2d(ndf, ndf * 2, kernel_size=(1, 4), stride=(1, 2), padding=(0, 1), bias=False),
-            nn.BatchNorm2d(ndf * 2),
+            # [b, num_feature_map, 1, 64]
+            nn.Conv2d(args.num_feature_map, args.num_feature_map * 2, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_feature_map * 2),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*2) x 1 x 32
-            nn.Conv2d(ndf * 2, ndf * 4, kernel_size=(1, 4), stride=(1, 2), padding=(0, 1), bias=False),
-            nn.BatchNorm2d(ndf * 4),
+            # [b, num_feature_map * 2, 1, 32]
+            nn.Conv2d(args.num_feature_map * 2, args.num_feature_map * 4, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_feature_map * 4),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 1 x 16
+            # [b, num_feature_map * 4, 1, 16]
+            nn.Conv2d(args.num_feature_map * 4, args.num_hidden_map, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_hidden_map),
+            nn.LeakyReLU(0.2, inplace=True),
+            # [b, num_hidden_map, 1, 8]
         )
         self.decoder = nn.Sequential(
-            # state size. (ngf*4) x 1 x 16
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, kernel_size=(1, 4), stride=(1, 2), padding=(0, 1), bias=False),
-            nn.BatchNorm2d(ngf * 2),
+            # [b, num_hidden, 1, 8]
+            nn.ConvTranspose2d(args.num_hidden_map, args.num_feature_map * 4, kernel_size=(1, 4),
+                               stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_feature_map * 4),
             nn.ReLU(True),
-            # state size. (ngf*2) x 1 x 32
-            nn.ConvTranspose2d(ngf * 2, ngf, kernel_size=(1, 4), stride=(1, 2), padding=(0, 1), bias=False),
-            nn.BatchNorm2d(ngf),
+            # [b, num_feature_map * 4, 1, 16]
+            nn.ConvTranspose2d(args.num_feature_map * 4, args.num_feature_map * 2, kernel_size=(1, 4),
+                               stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_feature_map * 2),
             nn.ReLU(True),
-            # state size. (ngf) x 1 x 64
-            nn.ConvTranspose2d(ngf, nc, kernel_size=(1, 4), stride=(1, 2), padding=(0, 1), bias=False),
+            # [b, num_feature_map * 2, 1, 32]
+            nn.ConvTranspose2d(args.num_feature_map * 2, args.num_feature_map, kernel_size=(1, 4),
+                               stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_feature_map),
+            nn.ReLU(True),
+            # [b, num_feature_map, 1, 64]
+            nn.ConvTranspose2d(args.num_feature_map, 3, kernel_size=(1, 4),
+                               stride=(1, 2), padding=(0, 1), bias=False),
             nn.Sigmoid()
-            # state size. (nc) x 1 x 128
+            # [b, 3, 1, 128]
         )
 
     def forward(self, x):

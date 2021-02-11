@@ -24,12 +24,14 @@ class AutoEncoder(nn.Module):
 
     def __init__(self, args):
         super(AutoEncoder, self).__init__()
+        self.args = args
         net = net_classes[args.net_name]
-        if args.net_name == 'MLP':
-            self.feat = net(args)
-        else:
-            self.feat = net()
+        self.AE = net(args)
 
     def forward(self, x):
-        output, z = self.feat(x)
-        return output, z
+        if self.args.model_name == 'VAE':
+            output, z, kld = self.AE(x)
+            return output, z, kld
+        else:
+            output, z = self.AE(x)
+            return output, z

@@ -49,11 +49,11 @@ class BaseExperiment:
                                       batch_size=args.batch_size,
                                       shuffle=False
                                       )
-        print(self.data_loader.dataset)
         self.spots = np.load('{}/spots.npy'.format(info_path))
         self.AE = AutoEncoder(args)  # AutoEncoder
         self.AE.apply(self.weights_init)
         self.criterion = nn.MSELoss()
+        self.vis = visdom.Visdom()
 
     def select_optimizer(self, model):
         if self.args.optimizer == 'Adam':
@@ -113,7 +113,6 @@ class BaseExperiment:
         best_epoch = 1
         lh = {}
         losses, mses, klds = [], [], []
-        vis = visdom.Visdom()
         for epoch in range(self.args.num_epoch):
             t0 = time.time()
             if self.args.net_name == 'MLP':
@@ -168,20 +167,8 @@ class BaseExperiment:
             losses.append(loss.item())
             mses.append(mse.item())
             klds.append(kld.item())
-            vis.line(Y=np.array([loss.item()]), X=np.array([epoch + 1]),
-                     win='Train loss',
-                     opts=dict(title='Train loss'),
-                     update='append'
-                     )
-            plt.figure(figsize=(20, 20))
-            for i, spot in enumerate(self.spots):
-                plt.subplot(len(self.spots), 1, i + 1)
-                x = torch.tensor(self.data_loader.dataset[i * 71], dtype=torch.float32)
-                plt.plot(x.view(-1).detach().numpy(), label='original')
-                x_hat, _ = self.AE(x)
-                plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
-                plt.legend()
-            vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
+            self.show_loss(loss, epoch)
+            self.show_reconstruction(epoch)
         lh['Loss'] = losses
         lh['MSE'] = mses
         lh['KL Divergence'] = klds
@@ -191,6 +178,41 @@ class BaseExperiment:
         with open('{}/learning history/{}.json'.format(save_path, self.file_name()), 'w') as f:
             f.write(lh)
 
+    def show_loss(self, loss, epoch):
+        self.vis.line(Y=np.array([loss.item()]), X=np.array([epoch + 1]),
+                      win='Train loss',
+                      opts=dict(title='Train loss'),
+                      update='append'
+                      )
+
+    def show_reconstruction(self, epoch, seg_idx=25):
+        plt.figure(figsize=(15, 15))
+        num_seg = int(self.data_loader.dataset.shape[0] / len(self.spots))
+        spots_l1, spots_l2 = np.hsplit(self.spots, 2)
+        for i, (spot_l1, spot_l2) in enumerate(zip(spots_l1, spots_l2)):
+            # L1 sensors
+            plt.subplot(int(len(self.spots) / 2), 2, 2 * i + 1)
+            x = torch.tensor(self.data_loader.dataset[i * num_seg + seg_idx], dtype=torch.float32)
+            plt.plot(x.view(-1).detach().numpy(), label='original')
+            plt.title('A-{}-{}'.format(spot_l1, seg_idx))
+            x_hat, _ = self.AE(x)
+            plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
+            plt.axvline(x=127, ls='--', c='k')
+            plt.axvline(x=255, ls='--', c='k')
+            plt.legend()
+            # L2 sensors
+            plt.subplot(int(len(self.spots) / 2), 2, 2 * (i + 1))
+            x = torch.tensor(self.data_loader.dataset[(i + 5) * num_seg + seg_idx],
+                             dtype=torch.float32)
+            plt.plot(x.view(-1).detach().numpy(), label='original')
+            plt.title('A-{}-{}'.format(spot_l2, seg_idx))
+            x_hat, _ = self.AE(x)
+            plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
+            plt.axvline(x=127, ls='--', c='k')
+            plt.axvline(x=255, ls='--', c='k')
+            plt.legend()
+        plt.subplots_adjust(hspace=0.5)
+        self.vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
 
 def main():
     # Hyper-parameters

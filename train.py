@@ -22,9 +22,11 @@ import time
 import json
 import argparse
 from models.AutoEncoder import AutoEncoder
+import visdom
 
 
 data_path = './data/data_processed'
+info_path = './data/info'
 save_path = './results'
 
 
@@ -47,6 +49,8 @@ class BaseExperiment:
                                       batch_size=args.batch_size,
                                       shuffle=False
                                       )
+        print(self.data_loader.dataset)
+        self.spots = np.load('{}/spots.npy'.format(info_path))
         self.AE = AutoEncoder(args)  # AutoEncoder
         self.AE.apply(self.weights_init)
         self.criterion = nn.MSELoss()
@@ -109,6 +113,7 @@ class BaseExperiment:
         best_epoch = 1
         lh = {}
         losses, mses, klds = [], [], []
+        vis = visdom.Visdom()
         for epoch in range(self.args.num_epoch):
             t0 = time.time()
             if self.args.net_name == 'MLP':
@@ -163,6 +168,20 @@ class BaseExperiment:
             losses.append(loss.item())
             mses.append(mse.item())
             klds.append(kld.item())
+            vis.line(Y=np.array([loss.item()]), X=np.array([epoch + 1]),
+                     win='Train loss',
+                     opts=dict(title='Train loss'),
+                     update='append'
+                     )
+            plt.figure(figsize=(20, 20))
+            for i, spot in enumerate(self.spots):
+                plt.subplot(len(self.spots), 1, i + 1)
+                x = torch.tensor(self.data_loader.dataset[i * 71], dtype=torch.float32)
+                plt.plot(x.view(-1).detach().numpy(), label='original')
+                x_hat, _ = self.AE(x)
+                plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
+                plt.legend()
+            vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
         lh['Loss'] = losses
         lh['MSE'] = mses
         lh['KL Divergence'] = klds
@@ -171,11 +190,6 @@ class BaseExperiment:
         lh = json.dumps(lh, indent=2)
         with open('{}/learning history/{}.json'.format(save_path, self.file_name()), 'w') as f:
             f.write(lh)
-        fig, ax = plt.subplots()
-        ax.plot(x[0].view(-1).detach().numpy(), label='orignial')
-        ax.plot(x_hat[0].view(-1).detach().numpy(), label='reconstruct')
-        ax.legend()
-        plt.show()
 
 
 def main():

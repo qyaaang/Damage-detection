@@ -13,7 +13,7 @@
 
 import torch
 from torch.utils.data import DataLoader
-from torch import nn, optim, autograd
+from torch import nn, optim
 from adabelief_pytorch import AdaBelief
 import numpy as np
 import matplotlib.pyplot as plt
@@ -108,8 +108,9 @@ class BaseExperiment:
         best_loss = 100.
         best_epoch = 1
         lh = {}
-        losses = [0]
+        losses, mses, klds = [], [], []
         for epoch in range(self.args.num_epoch):
+            t0 = time.time()
             if self.args.net_name == 'MLP':
                 if self.args.model_name == 'VAE':
                     f = torch.zeros(len(self.data_loader.dataset), int(self.args.dim_feature / 2))
@@ -123,29 +124,35 @@ class BaseExperiment:
                 x = torch.tensor(sample_batched, dtype=torch.float32)
                 if self.args.net_name == 'Conv2D': x = x.unsqueeze(2)
                 if self.args.model_name == 'VAE':
-                    x_hat, z, kld = self.AE(x)
+                    x_hat, z, z_kld = self.AE(x)
                     loss = self.criterion(x_hat, x)
-                    elbo = - loss - 1.0 * kld
+                    elbo = - loss - 1.0 * z_kld
                     loss = - elbo
                 else:
                     x_hat, z = self.AE(x)
                     mse = self.criterion(x_hat, x)
                     kld = torch.sum(x * torch.log(x + 1e-7 / x_hat)) / x.numel()
-                    loss = mse + 0.0 * kld
+                    loss = mse + self.args.err_kld_coef * kld
                     loss = loss
                 f[idx: idx + batch_size] = z
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 idx += batch_size
+            t1 = time.time()
             if self.args.model_name == 'VAE':
                 print('\033[1;31mEpoch: {}\033[0m\t'
                       '\033[1;32mReconstruction loss: {:5f}\033[0m\t'
-                      '\033[1;32mKL Divergency: {:5f}\033[0m'
-                      .format(epoch + 1, loss.item(), kld))
+                      '\033[1;33mKL Divergence: {:5f}\033[0m\t'
+                      'Time cost: {:2f}s'
+                      .format(epoch + 1, loss.item(), z_kld, t1 - t0))
             else:
                 print('\033[1;31mEpoch: {}\033[0m\t'
-                      '\033[1;32mReconstruction loss: {:5f}\033[0m'.format(epoch + 1, loss.item()))
+                      '\033[1;32mReconstruction loss: {:5f}\033[0m\t'
+                      '\033[1;33mMSE: {:5f}\033[0m\t'
+                      '\033[1;34mKL Divergence: {:2f}\033[0m\t'
+                      'Time cost: {:2f}s'
+                      .format(epoch + 1, loss.item(), mse.item(), kld.item(), t1 - t0))
             if loss.item() < best_loss:
                 best_loss = loss.item()
                 best_epoch = epoch + 1
@@ -154,7 +161,11 @@ class BaseExperiment:
                 torch.save(self.AE.state_dict(), path)
                 np.save('{}/features/{}.npy'.format(save_path, self.file_name()), f)
             losses.append(loss.item())
+            mses.append(mse.item())
+            klds.append(kld.item())
         lh['Loss'] = losses
+        lh['MSE'] = mses
+        lh['KL Divergence'] = klds
         lh['Min loss'] = best_loss
         lh['Best epoch'] = best_epoch
         lh = json.dumps(lh, indent=2)
@@ -183,6 +194,7 @@ def main():
     # Conv2D setting
     parser.add_argument('--num_feature_map', default=128, type=int)
     parser.add_argument('--num_hidden_map', default=256, type=int)
+    parser.add_argument('--err_kld_coef', default=0.0, type=float)
     parser.add_argument('--seed', default=23, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)

@@ -55,7 +55,8 @@ class BaseExperiment:
         self.AE = AutoEncoder(args).to(device)  # AutoEncoder
         self.AE.apply(self.weights_init)
         self.criterion = nn.MSELoss()
-        self.vis = visdom.Visdom(log_to_filename='{}/visualization/{}.log'.
+        self.vis = visdom.Visdom(env='{}'.format(self.file_name()),
+                                 log_to_filename='{}/visualization/{}.log'.
                                  format(save_path, self.file_name())
                                  )
         plt.figure(figsize=(15, 15))
@@ -176,7 +177,10 @@ class BaseExperiment:
                 best_loss = loss.item()
                 best_epoch = epoch + 1
                 f = f.detach().numpy()
-                path = '{}/models/{}.model'.format(save_path, self.file_name())
+                path = '{}/models/{}/{}.model'.format(save_path,
+                                                      self.args.model_name,
+                                                      self.file_name()
+                                                      )
                 torch.save(self.AE.state_dict(), path)
                 np.save('{}/features/{}.npy'.format(save_path, self.file_name()), f)
             losses.append(loss.item())

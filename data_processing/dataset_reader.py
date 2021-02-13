@@ -11,6 +11,7 @@
 """
 
 
+import torch
 import numpy as np
 
 
@@ -30,7 +31,9 @@ class DatasetReader:
             trainset, testset = self.gen_trainset_mlp(), self.gen_testset_mlp()
         else:
             trainset, testset = self.gen_trainset_conv2d(), self.gen_testset_conv2d()
-        return trainset, testset
+        trainset = trainset.astype(np.float32)
+        testset = testset.astype(np.float32)
+        return torch.from_numpy(trainset), torch.from_numpy(testset)
 
     def gen_trainset_mlp(self):
         """

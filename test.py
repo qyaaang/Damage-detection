@@ -69,8 +69,7 @@ class DamageDetection:
         with torch.no_grad():
             for i, spot in enumerate(self.spots):
                 damage_indices[spot] = {}
-                data_origin = torch.from_numpy(self.testset[i])
-                data_origin = torch.tensor(data_origin, dtype=torch.float32)
+                data_origin = self.testset[i]
                 feature_origin = self.feat[i: i + data_origin.size(0)]
                 if self.args.net_name == 'Conv2D': data_origin = data_origin.unsqueeze(2)
                 data_reconstruct, feature_reconstruct = self.AE(data_origin)

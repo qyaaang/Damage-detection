@@ -62,7 +62,10 @@ class DamageDetection:
                                                )
 
     def test(self):
-        path = '{}/models/{}.model'.format(save_path, self.file_name())
+        path = '{}/models/{}/{}.model'.format(save_path,
+                                              self.args.model_name,
+                                              self.file_name()
+                                              )
         self.AE.load_state_dict(torch.load(path))  # Load AutoEncoder
         self.AE.eval()
         damage_indices = {}

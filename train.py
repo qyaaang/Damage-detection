@@ -184,6 +184,7 @@ class BaseExperiment:
             klds.append(kld.item())
             self.show_loss(loss, epoch)
             self.show_reconstruction(epoch)
+        plt.close()
         lh['Loss'] = losses
         lh['MSE'] = mses
         lh['KL Divergence'] = klds
@@ -231,7 +232,6 @@ class BaseExperiment:
             plt.legend(loc='upper center')
         plt.subplots_adjust(hspace=0.5)
         self.vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
-        # plt.close()
 
     def replay_learning(self):
         self.vis.replay_log(log_filename='{}/visualization/{}.log'.

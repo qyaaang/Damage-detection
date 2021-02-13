@@ -43,13 +43,23 @@ class DamageDetection:
         self.test()
 
     def file_name(self):
-        return '{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
-                                          self.args.net_name,
-                                          self.args.len_seg,
-                                          self.args.optimizer,
-                                          self.args.learning_rate,
-                                          self.args.num_epoch
-                                          )
+        if self.args.net_name == 'MLP':
+          return '{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
+                                            self.args.net_name,
+                                            self.args.len_seg,
+                                            self.args.optimizer,
+                                            self.args.learning_rate,
+                                            self.args.num_epoch
+                                            )
+        else:
+          return '{}_{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
+                                               self.args.net_name,
+                                               self.args.len_seg,
+                                               self.args.optimizer,
+                                               self.args.learning_rate,
+                                               self.args.num_epoch,
+                                               self.args.num_hidden_map
+                                               )
 
     def test(self):
         path = '{}/models/{}.model'.format(save_path, self.file_name())

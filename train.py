@@ -29,6 +29,8 @@ data_path = './data/data_processed'
 info_path = './data/info'
 save_path = './results'
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 
 class BaseExperiment:
 
@@ -50,7 +52,7 @@ class BaseExperiment:
                                       shuffle=False
                                       )
         self.spots = np.load('{}/spots.npy'.format(info_path))
-        self.AE = AutoEncoder(args)  # AutoEncoder
+        self.AE = AutoEncoder(args).to(device)  # AutoEncoder
         self.AE.apply(self.weights_init)
         self.criterion = nn.MSELoss()
         self.vis = visdom.Visdom()
@@ -126,6 +128,7 @@ class BaseExperiment:
             for _, sample_batched in enumerate(self.data_loader):
                 batch_size = sample_batched.size(0)
                 x = torch.tensor(sample_batched, dtype=torch.float32)
+                x = x.to(device)
                 if self.args.net_name == 'Conv2D': x = x.unsqueeze(2)
                 if self.args.model_name == 'VAE':
                     x_hat, z, z_kld = self.AE(x)
@@ -193,23 +196,25 @@ class BaseExperiment:
             # L1 sensors
             plt.subplot(int(len(self.spots) / 2), 2, 2 * i + 1)
             x = torch.tensor(self.data_loader.dataset[i * num_seg + seg_idx], dtype=torch.float32)
+            x = x.to(device)
             if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
-            plt.plot(x.view(-1).detach().numpy(), label='original')
+            plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l1, seg_idx))
             x_hat, _ = self.AE(x)
-            plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
+            plt.plot(x_hat.view(-1).detach().cpu().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
             plt.axvline(x=255, ls='--', c='k')
             plt.legend(loc='upper center')
-            # L2 sensors
+            # L2 sensors 
             plt.subplot(int(len(self.spots) / 2), 2, 2 * (i + 1))
             x = torch.tensor(self.data_loader.dataset[(i + 5) * num_seg + seg_idx],
                              dtype=torch.float32)
+            x = x.to(device)
             if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
-            plt.plot(x.view(-1).detach().numpy(), label='original')
+            plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l2, seg_idx))
             x_hat, _ = self.AE(x)
-            plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
+            plt.plot(x_hat.view(-1).detach().cpu().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
             plt.axvline(x=255, ls='--', c='k')
             plt.legend(loc='upper center')

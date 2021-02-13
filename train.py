@@ -58,6 +58,7 @@ class BaseExperiment:
         self.vis = visdom.Visdom(log_to_filename='{}/visualization/{}.log'.
                                  format(save_path, self.file_name())
                                  )
+        plt.figure(figsize=(15, 15))
 
     def select_optimizer(self, model):
         if self.args.optimizer == 'Adam':
@@ -139,8 +140,7 @@ class BaseExperiment:
             idx = 0
             for _, sample_batched in enumerate(self.data_loader):
                 batch_size = sample_batched.size(0)
-                x = torch.tensor(sample_batched, dtype=torch.float32)
-                x = x.to(device)
+                x = sample_batched.to(device)
                 if self.args.net_name == 'Conv2D': x = x.unsqueeze(2)
                 if self.args.model_name == 'VAE':
                     x_hat, z, z_kld = self.AE(x)
@@ -201,13 +201,13 @@ class BaseExperiment:
                       )
 
     def show_reconstruction(self, epoch, seg_idx=25):
-        plt.figure(figsize=(15, 15))
+        plt.clf()
         num_seg = int(self.data_loader.dataset.shape[0] / len(self.spots))
         spots_l1, spots_l2 = np.hsplit(self.spots, 2)
         for i, (spot_l1, spot_l2) in enumerate(zip(spots_l1, spots_l2)):
             # L1 sensors
             plt.subplot(int(len(self.spots) / 2), 2, 2 * i + 1)
-            x = torch.tensor(self.data_loader.dataset[i * num_seg + seg_idx], dtype=torch.float32)
+            x = self.data_loader.dataset[i * num_seg + seg_idx]
             x = x.to(device)
             if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
@@ -219,8 +219,7 @@ class BaseExperiment:
             plt.legend(loc='upper center')
             # L2 sensors 
             plt.subplot(int(len(self.spots) / 2), 2, 2 * (i + 1))
-            x = torch.tensor(self.data_loader.dataset[(i + 5) * num_seg + seg_idx],
-                             dtype=torch.float32)
+            x = self.data_loader.dataset[(i + 5) * num_seg + seg_idx]
             x = x.to(device)
             if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
@@ -232,7 +231,7 @@ class BaseExperiment:
             plt.legend(loc='upper center')
         plt.subplots_adjust(hspace=0.5)
         self.vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
-        plt.close()
+        # plt.close()
 
     def replay_learning(self):
         self.vis.replay_log(log_filename='{}/visualization/{}.log'.

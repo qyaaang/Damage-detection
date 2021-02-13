@@ -55,7 +55,9 @@ class BaseExperiment:
         self.AE = AutoEncoder(args).to(device)  # AutoEncoder
         self.AE.apply(self.weights_init)
         self.criterion = nn.MSELoss()
-        self.vis = visdom.Visdom()
+        self.vis = visdom.Visdom(log_to_filename='{}/visualization/{}.log'.
+                                 format(save_path, self.file_name())
+                                 )
 
     def select_optimizer(self, model):
         if self.args.optimizer == 'Adam':
@@ -101,13 +103,23 @@ class BaseExperiment:
             nn.init.normal_(m.weight.data, 0.0, 0.02)
 
     def file_name(self):
-        return '{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
-                                          self.args.net_name,
-                                          self.args.len_seg,
-                                          self.args.optimizer,
-                                          self.args.learning_rate,
-                                          self.args.num_epoch
-                                          )
+        if self.args.net_name == 'MLP':
+          return '{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
+                                            self.args.net_name,
+                                            self.args.len_seg,
+                                            self.args.optimizer,
+                                            self.args.learning_rate,
+                                            self.args.num_epoch
+                                            )
+        else:
+          return '{}_{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
+                                               self.args.net_name,
+                                               self.args.len_seg,
+                                               self.args.optimizer,
+                                               self.args.learning_rate,
+                                               self.args.num_epoch,
+                                               self.args.num_hidden_map
+                                               )
 
     def train(self):
         optimizer = self.select_optimizer(self.AE)
@@ -157,7 +169,7 @@ class BaseExperiment:
                 print('\033[1;31mEpoch: {}\033[0m\t'
                       '\033[1;32mReconstruction loss: {:5f}\033[0m\t'
                       '\033[1;33mMSE: {:5f}\033[0m\t'
-                      '\033[1;34mKL Divergence: {:2f}\033[0m\t'
+                      '\033[1;34mKL Divergence: {:5f}\033[0m\t'
                       'Time cost: {:2f}s'
                       .format(epoch + 1, loss.item(), mse.item(), kld.item(), t1 - t0))
             if loss.item() < best_loss:
@@ -222,6 +234,11 @@ class BaseExperiment:
         self.vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
         plt.close()
 
+    def replay_learning(self):
+        self.vis.replay_log(log_filename='{}/visualization/{}.log'.
+                            format(save_path, self.file_name())
+                            )   
+
 def main():
     # Hyper-parameters
     parser = argparse.ArgumentParser()
@@ -246,7 +263,9 @@ def main():
     args = parser.parse_args()
     exp = BaseExperiment(args)
     exp.train()
+    # exp.replay_learning()
 
 
 if __name__ == '__main__':
     main()
+    

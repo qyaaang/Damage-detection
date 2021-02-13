@@ -193,26 +193,29 @@ class BaseExperiment:
             # L1 sensors
             plt.subplot(int(len(self.spots) / 2), 2, 2 * i + 1)
             x = torch.tensor(self.data_loader.dataset[i * num_seg + seg_idx], dtype=torch.float32)
+            if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l1, seg_idx))
             x_hat, _ = self.AE(x)
             plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
             plt.axvline(x=255, ls='--', c='k')
-            plt.legend()
+            plt.legend(loc='upper center')
             # L2 sensors
             plt.subplot(int(len(self.spots) / 2), 2, 2 * (i + 1))
             x = torch.tensor(self.data_loader.dataset[(i + 5) * num_seg + seg_idx],
                              dtype=torch.float32)
+            if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l2, seg_idx))
             x_hat, _ = self.AE(x)
             plt.plot(x_hat.view(-1).detach().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
             plt.axvline(x=255, ls='--', c='k')
-            plt.legend()
+            plt.legend(loc='upper center')
         plt.subplots_adjust(hspace=0.5)
         self.vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
+        plt.close()
 
 def main():
     # Hyper-parameters

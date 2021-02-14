@@ -41,6 +41,16 @@ class AutoEncoder(nn.Module):
             nn.Linear(256, args.dim_input),
             nn.Sigmoid()
         )
+        self.encoder_ = nn.Sequential(
+            nn.Linear(args.dim_input, 256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(128, 64),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(64, args.dim_feature),
+            nn.LeakyReLU(0.2, inplace=True),
+        )
 
     def forward(self, x):
         batch_size = x.size(0)
@@ -58,7 +68,8 @@ class AutoEncoder(nn.Module):
         else:
             z = self.encoder(x)
             output = self.decoder(z)
-            return output, z
+            z_hat = self.encoder_(output)
+            return output, z, z_hat
 
 
 class AutoEncoderConv(nn.Module):
@@ -110,8 +121,31 @@ class AutoEncoderConv(nn.Module):
             nn.Sigmoid()
             # [b, 3, 1, 128]
         )
+        self.encoder_ = nn.Sequential(
+            # [b, 3, 1, 128]
+            nn.Conv2d(3, args.num_feature_map, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # [b, num_feature_map, 1, 64]
+            nn.Conv2d(args.num_feature_map, args.num_feature_map * 2, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_feature_map * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # [b, num_feature_map * 2, 1, 32]
+            nn.Conv2d(args.num_feature_map * 2, args.num_feature_map * 4, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_feature_map * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # [b, num_feature_map * 4, 1, 16]
+            nn.Conv2d(args.num_feature_map * 4, args.num_hidden_map, kernel_size=(1, 4),
+                      stride=(1, 2), padding=(0, 1), bias=False),
+            nn.BatchNorm2d(args.num_hidden_map),
+            nn.LeakyReLU(0.2, inplace=True),
+            # [b, num_hidden_map, 1, 8]
+        )
 
     def forward(self, x):
         z = self.encoder(x)
         output = self.decoder(z)
-        return output, z
+        z_hat = self.encoder_(output)
+        return output, z, z_hat

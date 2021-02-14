@@ -33,5 +33,5 @@ class AutoEncoder(nn.Module):
             output, z, kld = self.AE(x)
             return output, z, kld
         else:
-            output, z = self.AE(x)
-            return output, z
+            output, z, z_hat = self.AE(x)
+            return output, z, z_hat

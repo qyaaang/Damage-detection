@@ -10,6 +10,7 @@
 @version: 1.0
 """
 
+
 import torch
 import numpy as np
 import data_processing as dp
@@ -17,9 +18,12 @@ import argparse
 import json
 from models.AutoEncoder import AutoEncoder
 
+
 data_path = './data/data_processed'
 info_path = './data/info'
 save_path = './results'
+
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
 class DamageDetection:
@@ -61,12 +65,15 @@ class DamageDetection:
                                                self.args.num_hidden_map
                                                )
 
+    def damage_index(self, err):
+        return 1 - np.exp(- self.args.alpha * err)
+
     def test(self):
         path = '{}/models/{}/{}.model'.format(save_path,
                                               self.args.model_name,
                                               self.file_name()
                                               )
-        self.AE.load_state_dict(torch.load(path))  # Load AutoEncoder
+        self.AE.load_state_dict(torch.load(path, map_location=torch.device(device)))  # Load AutoEncoder
         self.AE.eval()
         damage_indices = {}
         with torch.no_grad():
@@ -76,16 +83,25 @@ class DamageDetection:
                 feature_origin = self.feat[i: i + data_origin.size(0)]
                 if self.args.net_name == 'Conv2D': data_origin = data_origin.unsqueeze(2)
                 data_reconstruct, feature_reconstruct = self.AE(data_origin)
-                c_res = ((data_reconstruct - data_origin) ** 2).mean()
-                f_res = ((feature_reconstruct - feature_origin) ** 2).mean()
-                damage_index = 0
-                # damage_indices[spot]['Generate residual'] = res.item()
-                # damage_indices[spot]['Discriminate loss'] = np.abs(dis.item())
-                print('[{}]\tLoss: {:5f}\tLoss: {:5f}'.
-                      format(spot, c_res.item(), f_res.item())
+                if self.args.net_name == 'Conv2D':
+                    feature_origin = feature_origin.reshape(data_origin.size(0), -1)
+                    feature_reconstruct = feature_reconstruct.reshape(data_origin.size(0), -1)
+                reconstruct_err = ((data_reconstruct - data_origin) ** 2).mean()
+                feature_err = ((feature_reconstruct - feature_origin) ** 2).mean()
+                damage_index = self.damage_index(reconstruct_err.item() + feature_err.item())
+                damage_indices[spot]['Reconstruction loss'] = reconstruct_err.item()
+                damage_indices[spot]['Feature loss'] = feature_err.item()
+                print('\033[1;32m[{}]\033[0m\t'
+                      '\033[1;31mReconstruction loss: {:5f}\033[0m\t'
+                      '\033[1;33mFeature loss: {:5f}\033[0m\t'
+                      '\033[1;34mLoss: {:5f}\033[0m\t'
+                      '\033[1;35mDamage index: {:5f}\033[0m'.
+                      format(spot, reconstruct_err.item(), feature_err.item(),
+                             reconstruct_err.item() + feature_err.item(),
+                             damage_index)
                       )
                 i += data_origin.size(0)
-        # damage_indices = json.dumps(damage_indices, indent=2)
+        damage_indices = json.dumps(damage_indices, indent=2)
         # with open('{}/damage index/{}_{}.json'.format(save_path,
         #                                               self.args.dataset,
         #                                               self.file_name()
@@ -113,6 +129,7 @@ def main():
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)
     parser.add_argument('--learning_rate', default=1e-4, type=float)
+    parser.add_argument('--alpha', default=0.6, type=float)
     args = parser.parse_args()
     detector = DamageDetection(args)
     detector()

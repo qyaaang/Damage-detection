@@ -1,9 +1,9 @@
 sys=$(uname -a)
 Mac="Darwin"
-len_segs=(400)
+len_segs=(300 400 500)
 net_names=("MLP" "Conv2D")
-num_hidden_maps=(25)
-num_epoch=10
+num_hidden_maps=(256 100 50 25)
+num_epoch=10000
 learning_rate=1e-4
 for len_seg in "${len_segs[@]}"; do
   for net_name in "${net_names[@]}"; do

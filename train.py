@@ -65,12 +65,12 @@ class BaseExperiment:
         if self.args.optimizer == 'Adam':
             optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                    lr=self.args.learning_rate,
-                                   betas=(0.5, 0.9),
+                                   betas=(0.9, 0.999),
                                    )
         elif self.args.optimizer == 'AdaBelief':
             optimizer = AdaBelief(model.parameters(),
                                   lr=self.args.learning_rate,
-                                  betas=(0.5, 0.9)
+                                  betas=(0.9, 0.999)
                                   )
         elif self.args.optimizer == 'RMS':
             optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, model.parameters()),
@@ -128,7 +128,7 @@ class BaseExperiment:
         best_loss = 100.
         best_epoch = 1
         lh = {}
-        losses, mses, klds = [], [], []
+        losses, mses_x, mses_z = [], [], []
         for epoch in range(self.args.num_epoch):
             t0 = time.time()
             if self.args.net_name == 'MLP':
@@ -149,10 +149,10 @@ class BaseExperiment:
                     elbo = - loss - 1.0 * z_kld
                     loss = - elbo
                 else:
-                    x_hat, z = self.AE(x)
-                    mse = self.criterion(x_hat, x)
-                    kld = torch.sum(x * torch.log(x + 1e-7 / x_hat)) / x.numel()
-                    loss = mse + self.args.err_kld_coef * kld
+                    x_hat, z, z_hat = self.AE(x)
+                    mse_x = self.criterion(x_hat, x)
+                    mse_z = self.criterion(z_hat, z)
+                    loss = 0.5 * mse_x + 0.5 * mse_z
                     loss = loss
                 f[idx: idx + batch_size] = z
                 optimizer.zero_grad()
@@ -164,15 +164,15 @@ class BaseExperiment:
                 print('\033[1;31mEpoch: {}\033[0m\t'
                       '\033[1;32mReconstruction loss: {:5f}\033[0m\t'
                       '\033[1;33mKL Divergence: {:5f}\033[0m\t'
-                      'Time cost: {:2f}s'
+                      '\033[1;35mTime cost: {:2f}s\033[0m'
                       .format(epoch + 1, loss.item(), z_kld, t1 - t0))
             else:
                 print('\033[1;31mEpoch: {}\033[0m\t'
-                      '\033[1;32mReconstruction loss: {:5f}\033[0m\t'
+                      '\033[1;32mLoss: {:5f}\033[0m\t'
                       '\033[1;33mMSE: {:5f}\033[0m\t'
-                      '\033[1;34mKL Divergence: {:5f}\033[0m\t'
-                      'Time cost: {:2f}s'
-                      .format(epoch + 1, loss.item(), mse.item(), kld.item(), t1 - t0))
+                      '\033[1;34mMSE_latent: {:5f}\033[0m\t'
+                      '\033[1;35mTime cost: {:2f}s\033[0m'
+                      .format(epoch + 1, loss.item(), mse_x.item(), mse_z.item(), t1 - t0))
             if loss.item() < best_loss:
                 best_loss = loss.item()
                 best_epoch = epoch + 1
@@ -184,14 +184,14 @@ class BaseExperiment:
                 torch.save(self.AE.state_dict(), path)
                 np.save('{}/features/{}.npy'.format(save_path, self.file_name()), f)
             losses.append(loss.item())
-            mses.append(mse.item())
-            klds.append(kld.item())
+            mses_x.append(mse_x.item())
+            mses_z.append(mse_z.item())
             self.show_loss(loss, epoch)
             self.show_reconstruction(epoch)
         plt.close()
         lh['Loss'] = losses
-        lh['MSE'] = mses
-        lh['KL Divergence'] = klds
+        lh['MSE'] = mses_x
+        lh['MSE latent'] = mses_z
         lh['Min loss'] = best_loss
         lh['Best epoch'] = best_epoch
         lh = json.dumps(lh, indent=2)
@@ -217,7 +217,7 @@ class BaseExperiment:
             if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l1, seg_idx))
-            x_hat, _ = self.AE(x)
+            x_hat, _, _ = self.AE(x)
             plt.plot(x_hat.view(-1).detach().cpu().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
             plt.axvline(x=255, ls='--', c='k')
@@ -229,7 +229,7 @@ class BaseExperiment:
             if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l2, seg_idx))
-            x_hat, _ = self.AE(x)
+            x_hat, _, _ = self.AE(x)
             plt.plot(x_hat.view(-1).detach().cpu().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
             plt.axvline(x=255, ls='--', c='k')
@@ -258,7 +258,6 @@ def main():
     # Conv2D setting
     parser.add_argument('--num_feature_map', default=128, type=int)
     parser.add_argument('--num_hidden_map', default=256, type=int)
-    parser.add_argument('--err_kld_coef', default=0.0, type=float)
     parser.add_argument('--seed', default=23, type=int)
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)

@@ -1,11 +1,11 @@
 sys=$(uname -a)
 Mac="Darwin"
-len_segs=(300)
-datasets=("W-2" "W-5" "W-7")
+len_segs=(500)
+datasets=("W-2" "W-5" "W-7" "W-15")
 net_names=("MLP")
-num_hidden_maps=(256)
-num_epoch=10000
-learning_rate=1e-4
+num_hidden_maps=(256 128 64 32)
+num_epoch=1000
+learning_rate=1e-3
 for len_seg in "${len_segs[@]}"; do
   for net_name in "${net_names[@]}"; do
     for dataset in "${datasets[@]}"; do

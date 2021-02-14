@@ -10,14 +10,12 @@
 @version: 1.0
 """
 
-
 import torch
 import numpy as np
 import data_processing as dp
 import argparse
 import json
 from models.AutoEncoder import AutoEncoder
-
 
 data_path = './data/data_processed'
 info_path = './data/info'
@@ -41,29 +39,29 @@ class DamageDetection:
         _, self.testset = white_noise(args.net_name)
         self.spots = np.load('{}/spots.npy'.format(info_path))
         self.AE = AutoEncoder(args)
-        self.feat = np.load('{}/features/{}.npy'.format(save_path, self.file_name()))
+        self.latent = np.load('{}/features/{}.npy'.format(save_path, self.file_name()))
 
     def __call__(self, *args, **kwargs):
         self.test()
 
     def file_name(self):
         if self.args.net_name == 'MLP':
-          return '{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
-                                            self.args.net_name,
-                                            self.args.len_seg,
-                                            self.args.optimizer,
-                                            self.args.learning_rate,
-                                            self.args.num_epoch
-                                            )
+            return '{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
+                                              self.args.net_name,
+                                              self.args.len_seg,
+                                              self.args.optimizer,
+                                              self.args.learning_rate,
+                                              self.args.num_epoch
+                                              )
         else:
-          return '{}_{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
-                                               self.args.net_name,
-                                               self.args.len_seg,
-                                               self.args.optimizer,
-                                               self.args.learning_rate,
-                                               self.args.num_epoch,
-                                               self.args.num_hidden_map
-                                               )
+            return '{}_{}_{}_{}_{}_{}_{}'.format(self.args.model_name,
+                                                 self.args.net_name,
+                                                 self.args.len_seg,
+                                                 self.args.optimizer,
+                                                 self.args.learning_rate,
+                                                 self.args.num_epoch,
+                                                 self.args.num_hidden_map
+                                                 )
 
     def damage_index(self, err):
         return 1 - np.exp(- self.args.alpha * err)
@@ -79,34 +77,36 @@ class DamageDetection:
         with torch.no_grad():
             for i, spot in enumerate(self.spots):
                 damage_indices[spot] = {}
-                data_origin = self.testset[i]
-                feature_origin = self.feat[i: i + data_origin.size(0)]
-                if self.args.net_name == 'Conv2D': data_origin = data_origin.unsqueeze(2)
-                data_reconstruct, feature_reconstruct = self.AE(data_origin)
-                if self.args.net_name == 'Conv2D':
-                    feature_origin = feature_origin.reshape(data_origin.size(0), -1)
-                    feature_reconstruct = feature_reconstruct.reshape(data_origin.size(0), -1)
-                reconstruct_err = ((data_reconstruct - data_origin) ** 2).mean()
-                feature_err = ((feature_reconstruct - feature_origin) ** 2).mean()
-                damage_index = self.damage_index(reconstruct_err.item() + feature_err.item())
-                damage_indices[spot]['Reconstruction loss'] = reconstruct_err.item()
-                damage_indices[spot]['Feature loss'] = feature_err.item()
+                x = self.testset[i]
+                x_size = x.size(0)
+                # z_w1 = self.latent[i: i + x_size]
+                if self.args.net_name == 'Conv2D': x = x.unsqueeze(2)
+                x_hat, z, z_hat = self.AE(x)
+                if self.args.net_name == 'Conv2D':  # Flatten
+                    z = z.reshape(x_size, -1)
+                    z_hat = z_hat.reshape(x_size, -1)
+                loss_x = ((x - x_hat) ** 2).mean()  # Reconstruction loss
+                loss_z = ((z - z_hat) ** 2).mean()  # Latent loss
+                loss = loss_x.item() + loss_z.item()  # Overall loss
+                damage_index = self.damage_index(loss)
+                damage_indices[spot]['Reconstruction loss'] = loss_x.item()
+                damage_indices[spot]['Latent loss'] = loss_z.item()
+                damage_indices[spot]['Damage index'] = damage_index
                 print('\033[1;32m[{}]\033[0m\t'
                       '\033[1;31mReconstruction loss: {:5f}\033[0m\t'
-                      '\033[1;33mFeature loss: {:5f}\033[0m\t'
+                      '\033[1;33mLatent loss: {:5f}\033[0m\t'
                       '\033[1;34mLoss: {:5f}\033[0m\t'
                       '\033[1;35mDamage index: {:5f}\033[0m'.
-                      format(spot, reconstruct_err.item(), feature_err.item(),
-                             reconstruct_err.item() + feature_err.item(),
-                             damage_index)
+                      format(spot, loss_x.item(), loss_z.item(),
+                             loss, damage_index)
                       )
-                i += data_origin.size(0)
+                i += x_size
         damage_indices = json.dumps(damage_indices, indent=2)
-        # with open('{}/damage index/{}_{}.json'.format(save_path,
-        #                                               self.args.dataset,
-        #                                               self.file_name()
-        #                                  ), 'w') as f:
-        #     f.write(damage_indices)
+        with open('{}/damage index/{}_{}.json'.format(save_path,
+                                                      self.args.dataset,
+                                                      self.file_name()
+                                                      ), 'w') as f:
+            f.write(damage_indices)
 
 
 def main():
@@ -129,7 +129,7 @@ def main():
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)
     parser.add_argument('--learning_rate', default=1e-4, type=float)
-    parser.add_argument('--alpha', default=0.6, type=float)
+    parser.add_argument('--alpha', default=10.0, type=float)
     args = parser.parse_args()
     detector = DamageDetection(args)
     detector()

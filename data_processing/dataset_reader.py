@@ -52,7 +52,7 @@ class DatasetReader:
         for i in range(self.num_sensor):
             tmp = self.data[i][0]
             for j in range(1, self.num_channel):
-                tmp = np.hstack((tmp, self.data[0][j]))
+                tmp = np.hstack((tmp, self.data[i][j]))
             testset[i] = tmp
         return testset
 

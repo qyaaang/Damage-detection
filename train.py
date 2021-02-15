@@ -214,9 +214,9 @@ class BaseExperiment:
             plt.subplot(int(len(self.spots) / 2), 2, 2 * i + 1)
             x = self.data_loader.dataset[i * num_seg + seg_idx]
             x = x.to(device)
-            if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l1, seg_idx))
+            if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             x_hat, _, _ = self.AE(x)
             plt.plot(x_hat.view(-1).detach().cpu().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
@@ -226,9 +226,9 @@ class BaseExperiment:
             plt.subplot(int(len(self.spots) / 2), 2, 2 * (i + 1))
             x = self.data_loader.dataset[(i + 5) * num_seg + seg_idx]
             x = x.to(device)
-            if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             plt.plot(x.view(-1).detach().cpu().numpy(), label='original')
             plt.title('A-{}-{}'.format(spot_l2, seg_idx))
+            if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
             x_hat, _, _ = self.AE(x)
             plt.plot(x_hat.view(-1).detach().cpu().numpy(), label='reconstruct')
             plt.axvline(x=127, ls='--', c='k')
@@ -237,10 +237,6 @@ class BaseExperiment:
         plt.subplots_adjust(hspace=0.5)
         self.vis.matplot(plt, win='Reconstruction', opts=dict(title='Epoch: {}'.format(epoch + 1)))
 
-    def replay_learning(self):
-        self.vis.replay_log(log_filename='{}/visualization/{}.log'.
-                            format(save_path, self.file_name())
-                            )   
 
 def main():
     # Hyper-parameters
@@ -265,7 +261,6 @@ def main():
     args = parser.parse_args()
     exp = BaseExperiment(args)
     exp.train()
-    # exp.replay_learning()
 
 
 if __name__ == '__main__':

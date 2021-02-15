@@ -1,7 +1,7 @@
 sys=$(uname -a)
 Mac="Darwin"
-len_segs=(500 400 300)
-net_names=("Conv2D")
+len_segs=(300 400 500)
+net_names=("MLP" "Conv2D")
 num_hidden_maps=(256 128 64 32)
 num_epoch=1000
 learning_rate=1e-3

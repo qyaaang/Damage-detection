@@ -65,12 +65,12 @@ class BaseExperiment:
         if self.args.optimizer == 'Adam':
             optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                    lr=self.args.learning_rate,
-                                   betas=(0.9, 0.999),
+                                   betas=(0.5, 0.999),
                                    )
         elif self.args.optimizer == 'AdaBelief':
             optimizer = AdaBelief(model.parameters(),
                                   lr=self.args.learning_rate,
-                                  betas=(0.9, 0.999)
+                                  betas=(0.5, 0.999)
                                   )
         elif self.args.optimizer == 'RMS':
             optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, model.parameters()),

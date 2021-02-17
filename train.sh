@@ -3,11 +3,11 @@ Mac="Darwin"
 len_segs=(300 400 500)
 net_names=("MLP" "Conv2D")
 num_hidden_maps=(256 128 64 32)
-num_epoch=10000
 learning_rate=1e-4
 for len_seg in "${len_segs[@]}"; do
   for net_name in "${net_names[@]}"; do
       if [ "$net_name" == "MLP" ]; then
+          num_epoch=10000
           printf "\033[1;32mLength of segments:\t%s\nNet name:\t%s\n\033[0m" \
                  "$len_seg" "$net_name"
           if [[ $sys =~ $Mac ]]; then
@@ -18,6 +18,7 @@ for len_seg in "${len_segs[@]}"; do
                               --num_epoch $num_epoch --learning_rate $learning_rate
           fi
       else
+          num_epoch=1000
           for num_hidden_map in "${num_hidden_maps[@]}"; do
             printf "\033[1;32mLength of segments:\t%s\nNet name:\t%s\nNum hidden maps:\t%s\n\033[0m" \
                    "$len_seg" "$net_name" "$num_hidden_map"

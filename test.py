@@ -74,17 +74,28 @@ class DamageDetection:
         self.AE.load_state_dict(torch.load(path, map_location=torch.device(device)))  # Load AutoEncoder
         self.AE.eval()
         damage_indices = {}
+        size_0 = self.testset.size(0)
+        size_1 = self.testset.size(1)
+        if self.args.net_name == 'MLP':
+            if self.args.model_name == 'VAE':
+                f = torch.zeros(size_0 * size_1, int(self.args.dim_feature / 2))
+            else:
+                f = torch.zeros(size_0 * size_1, int(self.args.dim_feature))
+        else:
+            f = torch.zeros(size_0 * size_1, self.args.num_hidden_map * 8)
+        idx = 0
         with torch.no_grad():
             for i, spot in enumerate(self.spots):
                 damage_indices[spot] = {}
                 x = self.testset[i]
                 x_size = x.size(0)
-                # z_w1 = self.latent[i: i + x_size]
+                # z_w1 = self.latent[idx: idx + x_size]
                 if self.args.net_name == 'Conv2D': x = x.unsqueeze(2)
                 x_hat, z, z_hat = self.AE(x)
                 if self.args.net_name == 'Conv2D':  # Flatten
                     z = z.reshape(x_size, -1)
                     z_hat = z_hat.reshape(x_size, -1)
+                f[idx: idx + x_size] = z  # Latent
                 loss_x = ((x - x_hat) ** 2).mean()  # Reconstruction loss
                 loss_z = ((z - z_hat) ** 2).mean()  # Latent loss
                 loss = loss_x.item() + loss_z.item()  # Overall loss
@@ -100,13 +111,16 @@ class DamageDetection:
                       format(spot, loss_x.item(), loss_z.item(),
                              loss, damage_index)
                       )
-                i += x_size
+                idx += x_size
         damage_indices = json.dumps(damage_indices, indent=2)
         with open('{}/damage index/{}_{}.json'.format(save_path,
                                                       self.args.dataset,
                                                       self.file_name()
                                                       ), 'w') as f:
             f.write(damage_indices)
+        np.save('{}/features/test/{}_{}.npy'.
+                format(save_path, self.args.dataset, self.file_name()), f
+                )
 
 
 def main():

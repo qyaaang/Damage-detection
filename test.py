@@ -78,11 +78,11 @@ class DamageDetection:
         size_1 = self.testset.size(1)
         if self.args.net_name == 'MLP':
             if self.args.model_name == 'VAE':
-                f = torch.zeros(size_0 * size_1, int(self.args.dim_feature / 2))
+                feats = torch.zeros(size_0 * size_1, int(self.args.dim_feature / 2))
             else:
-                f = torch.zeros(size_0 * size_1, int(self.args.dim_feature))
+                feats = torch.zeros(size_0 * size_1, int(self.args.dim_feature))
         else:
-            f = torch.zeros(size_0 * size_1, self.args.num_hidden_map * 8)
+            feats = torch.zeros(size_0 * size_1, self.args.num_hidden_map * 8)
         idx = 0
         with torch.no_grad():
             for i, spot in enumerate(self.spots):
@@ -95,7 +95,7 @@ class DamageDetection:
                 if self.args.net_name == 'Conv2D':  # Flatten
                     z = z.reshape(x_size, -1)
                     z_hat = z_hat.reshape(x_size, -1)
-                f[idx: idx + x_size] = z  # Latent
+                feats[idx: idx + x_size] = z  # Latent
                 loss_x = ((x - x_hat) ** 2).mean()  # Reconstruction loss
                 loss_z = ((z - z_hat) ** 2).mean()  # Latent loss
                 loss = loss_x.item() + loss_z.item()  # Overall loss
@@ -119,7 +119,7 @@ class DamageDetection:
                                                       ), 'w') as f:
             f.write(damage_indices)
         np.save('{}/features/test/{}_{}.npy'.
-                format(save_path, self.args.dataset, self.file_name()), f
+                format(save_path, self.args.dataset, self.file_name()), feats
                 )
 
 

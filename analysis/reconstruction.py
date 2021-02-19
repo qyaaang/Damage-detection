@@ -88,6 +88,12 @@ class Reconstruction:
                                label='Reconstructed')
                 axs[i][0].axvline(x=127, ls='--', c='k')
                 axs[i][0].axvline(x=255, ls='--', c='k')
+                axs[i][0].set_xticks(np.linspace(self.args.dim_input / 6,
+                                                 self.args.dim_input - self.args.dim_input / 6,
+                                                 3
+                                                 )
+                                     )
+                axs[i][0].set_xticklabels(['NS', 'EW', 'V'])
                 axs[i][0].legend(loc='upper center')
                 # L2 sensors
                 x = self.dataset[(i + 5) * num_seg + seg_idx]
@@ -102,6 +108,59 @@ class Reconstruction:
                                label='Reconstructed')
                 axs[i][1].axvline(x=127, ls='--', c='k')
                 axs[i][1].axvline(x=255, ls='--', c='k')
+                axs[i][1].set_xticks(np.linspace(self.args.dim_input / 6,
+                                                 self.args.dim_input - self.args.dim_input / 6,
+                                                 3
+                                                 )
+                                     )
+                axs[i][1].set_xticklabels(['NS', 'EW', 'V'])
+                axs[i][1].legend(loc='upper center')
+            plt.subplots_adjust(hspace=0.5)
+            plt.show()
+
+    def show_latent_reconstruction(self, seg_idx=25):
+        self.load_model()
+        fig, axs = plt.subplots(nrows=int(len(self.spots) / 2),
+                                ncols=2,
+                                figsize=(15, 15)
+                                )
+        with torch.no_grad():
+            num_seg = int(self.dataset.shape[0] / len(self.spots))
+            spots_l1, spots_l2 = np.hsplit(self.spots, 2)
+            for i, (spot_l1, spot_l2) in enumerate(zip(spots_l1, spots_l2)):
+                # L1 sensors
+                x = self.dataset[i * num_seg + seg_idx]
+                x = x.to(device)
+                axs[i][0].set_title('{}-{}'.format(spot_l1, seg_idx))
+                if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
+                _, z, z_hat = self.AE(x)
+                axs[i][0].plot(z.view(-1).detach().cpu().numpy(),
+                               ls='--',
+                               c='b',
+                               label='Original')
+                axs[i][0].plot(z_hat.view(-1).detach().cpu().numpy(),
+                               ls='--',
+                               c='r',
+                               label='Reconstructed')
+                axs[i][0].set_xticks(np.linspace(0, z.view(-1).size(0) - 1, 3))
+                axs[i][0].set_xticklabels([1, '...', z.view(-1).size(0)])
+                axs[i][0].legend(loc='upper center')
+                # L2 sensors
+                x = self.dataset[(i + 5) * num_seg + seg_idx]
+                x = x.to(device)
+                axs[i][1].set_title('{}-{}'.format(spot_l2, seg_idx))
+                if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
+                _, z, z_hat = self.AE(x)
+                axs[i][1].plot(z.view(-1).detach().cpu().numpy(),
+                               ls='--',
+                               c='b',
+                               label='Original')
+                axs[i][1].plot(z_hat.view(-1).detach().cpu().numpy(),
+                               ls='--',
+                               c='r',
+                               label='Reconstructed')
+                axs[i][1].set_xticks(np.linspace(0, z.view(-1).size(0) - 1, 3))
+                axs[i][1].set_xticklabels([1, '...', z.view(-1).size(0)])
                 axs[i][1].legend(loc='upper center')
             plt.subplots_adjust(hspace=0.5)
             plt.show()
@@ -126,3 +185,4 @@ if __name__ == '__main__':
     plt.rcParams['font.family'] = 'Arial'
     show = Reconstruction(args)
     show.show_reconstruct()
+    show.show_latent_reconstruction()

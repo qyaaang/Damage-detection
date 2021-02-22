@@ -30,6 +30,12 @@ class Map:
         self.num_sensors = self.data.shape[0]
         self.num_channels = self.data.shape[1]
         self.num_segs = self.data.shape[2]
+        self.font = {'family': 'Arial',
+                     'style': 'normal',
+                     'weight': 'bold',
+                     'size': 8,
+                     'color': 'k',
+                     }
 
     def plot_map(self):
         data = self.data.reshape(self.num_sensors * self.num_channels, self.num_segs, -1)
@@ -37,7 +43,7 @@ class Map:
         fig, axs = plt.subplots(6, 6, figsize=(8, 5))
         for idx, ax in enumerate(axs.flat):
             ax.imshow(data[idx], interpolation='gaussian', cmap='viridis')
-            ax.set_title(sensors[idx].item(), fontsize=5)
+            ax.set_title(sensors[idx].item().strip('A-'), fontdict=self.font, pad=3)
             ax.axis('off')
         plt.tight_layout()
 

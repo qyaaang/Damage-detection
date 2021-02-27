@@ -13,6 +13,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import colors
 import argparse
 
 
@@ -40,12 +41,19 @@ class Map:
     def plot_map(self):
         data = self.data.reshape(self.num_sensors * self.num_channels, self.num_segs, -1)
         sensors = self.sensors.ravel()
-        fig, axs = plt.subplots(6, 6, figsize=(8, 5))
+        fig, axs = plt.subplots(6, 6, figsize=(9, 5))
+        images = []
         for idx, ax in enumerate(axs.flat):
-            ax.imshow(data[idx], interpolation='gaussian', cmap='viridis')
+            images.append(ax.imshow(data[idx], interpolation='gaussian', cmap='viridis'))
             ax.set_title(sensors[idx].item().strip('A-'), fontdict=self.font, pad=3)
             ax.axis('off')
-        plt.tight_layout()
+        vmin = min(image.get_array().min() for image in images)
+        vmax = max(image.get_array().max() for image in images)
+        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+        for im in images:
+            im.set_norm(norm)
+        fig.colorbar(images[0], ax=axs, orientation='vertical', fraction=0.1, anchor=(2, 0))
+        plt.subplots_adjust(hspace=0.5)
 
 
 if __name__ == '__main__':

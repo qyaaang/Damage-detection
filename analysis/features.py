@@ -105,6 +105,7 @@ def show_feature(args, x_r, y):
                        label=target_name
                        )
         ax.legend(loc='best', shadow=False, scatterpoints=1)
+    plt.tight_layout()
 
 
 if __name__ == '__main__':

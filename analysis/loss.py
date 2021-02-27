@@ -14,6 +14,7 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib.pyplot import MultipleLocator
 import argparse
 
@@ -76,6 +77,8 @@ class Loss:
     def spot_loss_3d(self, dataset):
         data = self.load_data(dataset)
         losses = np.empty((0, 3))
+        losses_l1 = np.empty((0, 3))
+        losses_l2 = np.empty((0, 3))
         for i, spot in enumerate(self.spots):
             loss_l1 = np.array([data['L1-{}'.format(spot)]['Reconstruction loss'],
                                 data['L1-{}'.format(spot)]['Latent loss'],
@@ -89,7 +92,9 @@ class Loss:
                                ).reshape(-1, 3)
             loss = np.vstack((loss_l1, loss_l2))
             losses = np.concatenate((losses, loss), axis=0)
-        return losses
+            losses_l1 = np.concatenate((losses_l1, loss_l1), axis=0)
+            losses_l2 = np.concatenate((losses_l2, loss_l2), axis=0)
+        return losses, losses_l1, losses_l2
 
     def plot_loss(self):
         fig, ax = plt.subplots()
@@ -101,14 +106,20 @@ class Loss:
         ax.set_xlabel('Reconstruction loss', fontdict=self.font)
         ax.set_ylabel('Latent loss', fontdict=self.font)
         ax.legend()
+        plt.tight_layout()
 
     def plot_loss_3d(self):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        markers = ['o', '*']
+        labels = ['Level-1', 'Level-2']
         for i, dataset in enumerate(self.datasets):
-            losses = self.spot_loss_3d(dataset)
-            ax.scatter(losses[:, 0], losses[:, 1], losses[:, 2],
-                       alpha=0.8, c=self.colors[i], label=self.labels[i]
+            _, losses_l1, losses_l2 = self.spot_loss_3d(dataset)
+            ax.scatter(losses_l1[:, 0], losses_l1[:, 1], losses_l1[:, 2],
+                       alpha=0.8, c=self.colors[i]
+                       )
+            ax.scatter(losses_l2[:, 0], losses_l2[:, 1], losses_l2[:, 2], marker='*',
+                       alpha=0.8, c=self.colors[i]
                        )
         x = np.linspace(ax.get_xlim()[0], ax.get_xlim()[1], 10)
         y = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 10)
@@ -123,7 +134,12 @@ class Loss:
         ax.set_ylabel('Latent loss', fontdict=self.font)
         ax.set_zticks(np.arange(1, len(self.spots) + 1))
         ax.set_zticklabels(self.spots)
-        ax.legend(bbox_to_anchor=(0.99, 1.05), ncol=3)
+        patch1 = [mpatches.Patch(color=self.colors[i],
+                                 label=self.labels[i]) for i in range(len(self.labels))]
+        patch2 = [ax.scatter([], [], marker=markers[i], facecolor='w', edgecolor='k',
+                  label=labels[i]) for i in range(len(labels))]
+        ax.legend(handles=patch1 + patch2, bbox_to_anchor=(0.99, 1.05), ncol=2)
+        plt.tight_layout()
 
 
 if __name__ == '__main__':

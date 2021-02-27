@@ -127,6 +127,7 @@ class Index:
         ax.legend(handles=handles, labels=labels, handler_map=hmap,
                   bbox_to_anchor=(0.99, 1.05), ncol=3
                   )
+        plt.tight_layout()
 
 
 class Handler:

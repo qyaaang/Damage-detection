@@ -59,15 +59,16 @@ class Learning:
         best_epoch = self.data['Best epoch']
         best_loss = self.data['Min loss']
         range_ = np.arange(1, len(loss) + 1)
-        ax.plot(range_, np.log(loss), c='r', label='Overall loss')
-        ax.plot(range_, np.log(loss_x), c='b', label='Reconstruction loss')
-        ax.plot(range_, np.log(loss_z), c='g', label='Latent loss')
+        ax.plot(range_, np.log(loss), c='r', lw=1, label='Overall loss')
+        ax.plot(range_, np.log(loss_x), c='b', lw=1, label='Reconstruction loss')
+        ax.plot(range_, np.log(loss_z), c='g', lw=1, label='Latent loss')
         ax.scatter(best_epoch, np.log(best_loss),
                    marker='*', s=100, c='r', label='Model save point')
         ax.set_xlim(0)
         ax.set_xlabel('Epoch', fontdict=font)
-        ax.set_ylabel('Log loss', fontdict=font)
+        ax.set_ylabel('Loss', fontdict=font)
         ax.legend()
+        plt.tight_layout()
 
 
 if __name__ == '__main__':

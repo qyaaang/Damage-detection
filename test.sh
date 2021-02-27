@@ -15,11 +15,13 @@ for len_seg in "${len_segs[@]}"; do
           if [[ $sys =~ $Mac ]]; then
               python3 test.py --dataset "$dataset" --model_name AE --net_name "$net_name" \
                               --len_seg "$len_seg" \
-                              --num_epoch $num_epoch --learning_rate $learning_rate
+                              --num_epoch $num_epoch --learning_rate $learning_rate \
+                              --alpha 20
           else
               python test.py --dataset "$dataset" --model_name AE --net_name "$net_name" \
                              --len_seg "$len_seg" \
-                             --num_epoch $num_epoch --learning_rate $learning_rate
+                             --num_epoch $num_epoch --learning_rate $learning_rate \
+                             --alpha 20
           fi
       else
           num_epoch=1000
@@ -30,12 +32,14 @@ for len_seg in "${len_segs[@]}"; do
                python3 test.py --dataset "$dataset" --model_name AE --net_name "$net_name" \
                                --len_seg "$len_seg" \
                                --num_epoch $num_epoch --num_hidden_map "$num_hidden_map" \
-                               --learning_rate $learning_rate
+                               --learning_rate $learning_rate \
+                               --alpha 100
             else
                python test.py --dataset "$dataset" --model_name AE --net_name "$net_name" \
                               --len_seg "$len_seg" \
                               --num_epoch $num_epoch --num_hidden_map "$num_hidden_map" \
-                              --learning_rate $learning_rate
+                              --learning_rate $learning_rate \
+                              --alpha 100
             fi
           done
       fi

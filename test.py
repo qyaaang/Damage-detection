@@ -98,7 +98,7 @@ class DamageDetection:
                 feats[idx: idx + x_size] = z  # Latent
                 loss_x = ((x - x_hat) ** 2).mean()  # Reconstruction loss
                 loss_z = ((z - z_hat) ** 2).mean()  # Latent loss
-                loss = loss_x.item() + loss_z.item()  # Overall loss
+                loss = self.args.beta * loss_x.item() + (1 - self.args.beta) * loss_z.item()  # Overall loss
                 damage_index = self.damage_index(loss)
                 damage_indices[spot]['Reconstruction loss'] = loss_x.item()
                 damage_indices[spot]['Latent loss'] = loss_z.item()
@@ -143,7 +143,8 @@ def main():
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)
     parser.add_argument('--learning_rate', default=1e-4, type=float)
-    parser.add_argument('--alpha', default=10.0, type=float)
+    parser.add_argument('--alpha', default=1.0, type=float)
+    parser.add_argument('--beta', default=0.5, type=float)
     args = parser.parse_args()
     detector = DamageDetection(args)
     detector()

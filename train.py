@@ -152,7 +152,7 @@ class BaseExperiment:
                     x_hat, z, z_hat = self.AE(x)
                     mse_x = self.criterion(x_hat, x)
                     mse_z = self.criterion(z_hat, z)
-                    loss = 0.5 * mse_x + 0.5 * mse_z
+                    loss = self.args.beta * mse_x + (1 - self.args.beta) * mse_z
                     loss = loss
                 f[idx: idx + batch_size] = z
                 optimizer.zero_grad()
@@ -258,6 +258,7 @@ def main():
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num_epoch', default=100, type=int)
     parser.add_argument('--learning_rate', default=1e-4, type=float)
+    parser.add_argument('--beta', default=0.5, type=float)
     args = parser.parse_args()
     exp = BaseExperiment(args)
     exp.train()

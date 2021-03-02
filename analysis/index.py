@@ -121,7 +121,7 @@ class Index:
         ax.set_yticks([])
         ax.set_xlabel('EW', fontdict=font)
         ax.set_ylabel('NS', fontdict=font)
-        ax.set_zlabel('Damage index', fontdict=font)
+        ax.set_zlabel('Probability of damage', fontdict=font)
         handles = [mpatches.Rectangle((0, 0), 1, 1) for _ in range(len(labels))]
         hmap = dict(zip(handles, [Handler(idx) for idx in range(len(labels))]))
         ax.legend(handles=handles, labels=labels, handler_map=hmap,

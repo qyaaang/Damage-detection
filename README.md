@@ -31,9 +31,9 @@ We propose a novel framework for damage detection consisted of two modules, name
 
 - Multilayer perceptron
 
-![MLP](/Users/qunyang/Dropbox (Personal)/Work/Journal paper/Paper1/Figures/PoD_MLP.png)
+![MLP](https://github.com/qryang/Damage-detection/blob/main/figures/PoD_MLP.png)
 
 - Convolution-Deconvolution
 
-![Conv-DeConv](/Users/qunyang/Dropbox (Personal)/Work/Journal paper/Paper1/Figures/PoD_Conv2D.png)
+![Conv-DeConv](https://github.com/qryang/Damage-detection/blob/main/figures/PoD_Conv2D.png)
 

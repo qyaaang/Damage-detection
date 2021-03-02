@@ -15,7 +15,7 @@ We propose a novel framework for damage detection consisted of two modules, name
 
 ## Framework
 
-![framework](/Users/qunyang/Dropbox (Personal)/Work/Journal paper/Paper1/Figures/Framework.tiff)
+![framework](https://github.com/qryang/Damage-detection/blob/main/figures/Framework.tiff)
 
 ## Architecture of damage recognition network
 

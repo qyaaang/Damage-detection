@@ -15,17 +15,17 @@ We propose a novel framework for damage detection consisted of two modules, name
 
 ## Framework
 
-![framework](https://github.com/qryang/Damage-detection/blob/main/figures/Framework.tiff)
+![framework](https://github.com/qryang/Damage-detection/blob/main/figures/Framework.jpg)
 
 ## Architecture of damage recognition network
 
 - Multilayer perceptron
 
-![MLP](/Users/qunyang/Dropbox (Personal)/Work/Journal paper/Paper1/Figures/MLP.tiff)
+![MLP](https://github.com/qryang/Damage-detection/blob/main/figures/MLP.jpg)
 
 - Convolution-Deconvolution
 
-![Conv-DeConv](/Users/qunyang/Dropbox (Personal)/Work/Journal paper/Paper1/Figures/Conv2D.tiff)
+![Conv-DeConv](https://github.com/qryang/Damage-detection/blob/main/figures/Conv2D.jpg)
 
 ## Probability of damage
 

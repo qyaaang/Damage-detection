@@ -86,7 +86,7 @@ def feat_dim_reduction(args, features):
 
 
 def show_feature(args, x_r, y):
-    target_names = ['Intact', '25%', '50%', '100%']
+    target_names = ['Undamaged', '25%', '50%', '100%']
     colors = ['g', 'b', 'y', 'r']
     if args.num_component == 3:
         fig = plt.figure()

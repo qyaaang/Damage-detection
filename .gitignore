@@ -6,3 +6,4 @@
 /analysis/*
 /data_processing/*
 /data_preparation.py
+/prep.sh

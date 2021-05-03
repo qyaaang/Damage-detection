@@ -24,6 +24,7 @@ info_path = '../data/info'
 class Map:
 
     def __init__(self, args):
+        self.args = args
         self.data = np.load('{0}/{1}/{2}/{3}_{1}.npy'.
                             format(data_path, args.data_source, args.len_seg, args.dataset)
                             )
@@ -45,7 +46,7 @@ class Map:
         images = []
         for idx, ax in enumerate(axs.flat):
             images.append(ax.imshow(data[idx], interpolation='gaussian', cmap='viridis'))
-            ax.set_title(sensors[idx].item().strip('A-'), fontdict=self.font, pad=3)
+            # ax.set_title(sensors[idx].item().strip('A-'), fontdict=self.font, pad=3)
             ax.axis('off')
         vmin = min(image.get_array().min() for image in images)
         vmax = max(image.get_array().max() for image in images)
@@ -54,6 +55,9 @@ class Map:
             im.set_norm(norm)
         fig.colorbar(images[0], ax=axs, orientation='vertical', fraction=0.1, anchor=(2, 0))
         plt.subplots_adjust(hspace=0.5)
+        fig.savefig('Map_{}.svg'.format(self.args.dataset),
+                    dpi=300, format='svg'
+                    )
 
 
 if __name__ == '__main__':

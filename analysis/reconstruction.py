@@ -65,12 +65,19 @@ class Reconstruction:
                                               )
         self.AE.load_state_dict(torch.load(path, map_location=torch.device(device)))  # Load AutoEncoder
 
-    def show_reconstruct(self, seg_idx=25):
+    def show_reconstruct(self, seg_idx=10):
         self.load_model()
         fig, axs = plt.subplots(nrows=int(len(self.spots) / 2),
                                 ncols=2,
-                                figsize=(15, 15)
+                                figsize=(15, 8),
+                                sharex='col',
+                                sharey='row'
                                 )
+        font = {'style': 'normal',
+                'weight': 'bold',
+                'color': 'k',
+                'size': 16
+                }
         with torch.no_grad():
             num_seg = int(self.dataset.shape[0] / len(self.spots))
             spots_l1, spots_l2 = np.hsplit(self.spots, 2)
@@ -78,12 +85,13 @@ class Reconstruction:
                 # L1 sensors
                 x = self.dataset[i * num_seg + seg_idx]
                 x = x.to(device)
-                axs[i][0].set_title('{}-{}'.format(spot_l1, seg_idx))
-                axs[i][0].plot(x.view(-1).detach().cpu().numpy(), c='b', label='Original')
+                # axs[i][0].set_title('{}-{}'.format(spot_l1, seg_idx), fontdict=font)
+                axs[i][0].plot(x.view(-1).detach().cpu().numpy(), lw=2.0, c='b', label='Original')
                 if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
                 x_hat, _, _ = self.AE(x)
                 axs[i][0].plot(x_hat.view(-1).detach().cpu().numpy(),
                                ls='--',
+                               lw=2.0,
                                c='r',
                                label='Reconstructed')
                 axs[i][0].axvline(x=127, ls='--', c='k')
@@ -93,17 +101,18 @@ class Reconstruction:
                                                  3
                                                  )
                                      )
-                axs[i][0].set_xticklabels(['NS', 'EW', 'V'])
+                axs[i][0].set_xticklabels(['NS', 'EW', 'V'], fontdict=font)
                 axs[i][0].legend(loc='upper center')
                 # L2 sensors
                 x = self.dataset[(i + 5) * num_seg + seg_idx]
                 x = x.to(device)
-                axs[i][1].plot(x.view(-1).detach().cpu().numpy(), c='b', label='Original')
-                axs[i][1].set_title('{}-{}'.format(spot_l2, seg_idx))
+                axs[i][1].plot(x.view(-1).detach().cpu().numpy(), lw=2.0, c='b', label='Original')
+                # axs[i][1].set_title('{}-{}'.format(spot_l2, seg_idx), fontdict=font)
                 if self.args.net_name == 'Conv2D': x = x.unsqueeze(0).unsqueeze(2)
                 x_hat, _, _ = self.AE(x)
                 axs[i][1].plot(x_hat.view(-1).detach().cpu().numpy(),
                                ls='--',
+                               lw=2.0,
                                c='r',
                                label='Reconstructed')
                 axs[i][1].axvline(x=127, ls='--', c='k')
@@ -113,16 +122,26 @@ class Reconstruction:
                                                  3
                                                  )
                                      )
-                axs[i][1].set_xticklabels(['NS', 'EW', 'V'])
+                axs[i][1].set_xticklabels(['NS', 'EW', 'V'], fontdict=font)
                 axs[i][1].legend(loc='upper center')
-            plt.subplots_adjust(hspace=0.5)
+            # plt.subplots_adjust(hspace=0.5)
+            plt.tight_layout()
+            if self.args.net_name == 'Conv2D':
+                fig.savefig('Rconstruction_{}_{}.svg'.format(self.args.net_name,
+                                                             self.args.num_hidden_map),
+                            dpi=1200, format='svg'
+                            )
+            else:
+                fig.savefig('Rconstruction_{}.svg'.format(self.args.net_name),
+                            dpi=1200, format='svg'
+                            )
             plt.show()
 
     def show_latent_reconstruction(self, seg_idx=25):
         self.load_model()
         fig, axs = plt.subplots(nrows=int(len(self.spots) / 2),
                                 ncols=2,
-                                figsize=(15, 15)
+                                figsize=(15, 15),
                                 )
         with torch.no_grad():
             num_seg = int(self.dataset.shape[0] / len(self.spots))
@@ -170,7 +189,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_source', default='FFT', type=str)
     parser.add_argument('--model_name', default='AE', type=str)
-    parser.add_argument('--net_name', default='MLP', type=str)
+    parser.add_argument('--net_name', default='Conv2D', type=str)
     parser.add_argument('--len_seg', default=500, type=int)
     parser.add_argument('--optimizer', default='Adam', type=str)
     # MLP setting
@@ -178,11 +197,11 @@ if __name__ == '__main__':
     parser.add_argument('--dim_feature', default=20, type=int)
     # Conv2D setting
     parser.add_argument('--num_feature_map', default=128, type=int)
-    parser.add_argument('--num_hidden_map', default=256, type=int)
-    parser.add_argument('--num_epoch', default=10000, type=int)
+    parser.add_argument('--num_hidden_map', default=32, type=int)
+    parser.add_argument('--num_epoch', default=1000, type=int)
     parser.add_argument('--learning_rate', default=1e-4, type=float)
     args = parser.parse_args()
     plt.rcParams['font.family'] = 'Arial'
     show = Reconstruction(args)
     show.show_reconstruct()
-    show.show_latent_reconstruction()
+    # show.show_latent_reconstruction()

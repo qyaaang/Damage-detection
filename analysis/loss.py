@@ -31,6 +31,10 @@ class Loss:
                       'Floor-A1', 'Floor-A2',
                       'Floor-B1', 'Floor-B2'
                       ]
+        self.spots_ = ['Wall-A2', 'Wall-B1',
+                       'Slab-A1', 'Slab-A2',
+                       'Slab-B1', 'Slab-B2'
+                       ]
         self.colors = ['b', 'g', 'r']
         self.labels = ['25%', '50%', '100%']
         self.font = {'family': 'Arial',
@@ -112,7 +116,7 @@ class Loss:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         markers = ['o', '*']
-        labels = ['Level-1', 'Level-2']
+        labels = ['1F', '2F']
         for i, dataset in enumerate(self.datasets):
             _, losses_l1, losses_l2 = self.spot_loss_3d(dataset)
             ax.scatter(losses_l1[:, 0], losses_l1[:, 1], losses_l1[:, 2],
@@ -133,7 +137,7 @@ class Loss:
         ax.set_xlabel('Reconstruction loss', fontdict=self.font)
         ax.set_ylabel('Latent loss', fontdict=self.font)
         ax.set_zticks(np.arange(1, len(self.spots) + 1))
-        ax.set_zticklabels(self.spots)
+        ax.set_zticklabels(self.spots_)
         patch1 = [mpatches.Patch(color=self.colors[i],
                                  label=self.labels[i]) for i in range(len(self.labels))]
         patch2 = [ax.scatter([], [], marker=markers[i], facecolor='w', edgecolor='k',

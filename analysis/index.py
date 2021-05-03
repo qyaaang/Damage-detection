@@ -94,6 +94,10 @@ class Index:
                 'size': 12,
                 'color': 'k',
                 }
+        locs_ = ['Wall-A2', 'Wall-B1',
+                 'Slab-A1', 'Slab-A2',
+                 'Slab-B1', 'Slab-B2'
+                 ]
         colors = ['b', 'g', 'r']
         labels = ['25%', '50%', '100%']
         coords = self.spot_coords()
@@ -114,8 +118,11 @@ class Index:
             a, b, c = self.damage_surface(dataset)
             ax.plot_surface(a, b, c, alpha=0.5, color=colors[i])
         for idx, (spot_name, _) in enumerate(self.locs.items()):
+            # ax.text(coords[idx, 0] + 600, coords[idx, 1], indices[idx] + 0.05,
+            #         spot_name, ha='center', va='bottom', fontdict=font, fontsize=8
+            #         )
             ax.text(coords[idx, 0] + 600, coords[idx, 1], indices[idx] + 0.05,
-                    spot_name, ha='center', va='bottom', fontdict=font, fontsize=8
+                    locs_[idx], ha='center', va='bottom', fontdict=font, fontsize=8
                     )
         ax.set_xticks([])
         ax.set_yticks([])

@@ -2,6 +2,7 @@
 *.npy
 *.ipynb
 /data/*
+/figures/*
 /results/*
 /analysis/*
 /data_processing/*

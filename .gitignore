@@ -1,5 +1,8 @@
 *.csv
 *.npy
 *.ipynb
-!/data/info/*.npy
+/data/*
 /results/*
+/analysis/*
+/data_processing/*
+data_preparation.py

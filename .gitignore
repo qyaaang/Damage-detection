@@ -6,5 +6,6 @@
 /results/*
 /analysis/*
 /data_processing/*
+/denoise.m
 /data_preparation.py
 /prep.sh

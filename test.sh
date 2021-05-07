@@ -1,7 +1,7 @@
 sys=$(uname -a)
 Mac="Darwin"
 len_segs=(300 400 500)
-datasets=("W-2" "W-5" "W-7")
+datasets=("WN2" "WN3" "WN4")
 net_names=("MLP" "Conv2D")
 num_hidden_maps=(256 128 64 32)
 learning_rate=1e-4

@@ -241,7 +241,7 @@ class BaseExperiment:
 def main():
     # Hyper-parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', default='W-1', type=str)
+    parser.add_argument('--dataset', default='WN1', type=str)
     parser.add_argument('--data_source', default='FFT', type=str)
     parser.add_argument('--model_name', default='AE', type=str)
     parser.add_argument('--net_name', default='MLP', type=str)
